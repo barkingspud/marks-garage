@@ -22,3 +22,4 @@ jobs:
           # Uses the Claude Pro subscription's usage quota (via a token from
           # `claude setup-token`) rather than separate pay-per-use API billing.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
