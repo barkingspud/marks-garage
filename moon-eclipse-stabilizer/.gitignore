@@ -1,0 +1,12 @@
+# PyInstaller build artifacts -- regenerate via the steps in README.md
+build/
+dist/
+installer_output/
+
+# Personal processing results -- videos and extracted frames, never source
+output/
+frames_extracted/
+selftest_out/
+
+# Test scratch
+test_input.mp4
