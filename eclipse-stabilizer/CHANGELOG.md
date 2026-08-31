@@ -1,8 +1,22 @@
 # Changelog
 
-All notable changes to Moon Eclipse Stabilizer are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
+All notable changes to Eclipse Stabilizer (formerly Moon Eclipse Stabilizer)
+are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH).
+
+## [1.2.0] - 2026-08-31
+
+### Changed
+- **Renamed the app**: "Moon Eclipse Stabilizer" → "Eclipse Stabilizer"
+  (folder `moon-eclipse-stabilizer/` → `eclipse-stabilizer/`, package
+  `moonlib` → `eclipselib`, GUI entry point `moon_gui.py` → `eclipse_gui.py`,
+  exe `MoonEclipseStabilizer.exe` → `EclipseStabilizer.exe`). The detection
+  and tracking pipeline was never actually moon-specific — it locates any
+  bright, roughly circular disk of known apparent size against a darker
+  background — so the name no longer implies it's lunar-only. GUI labels,
+  tooltips, and the Help tab now say "disk" / "sun or moon" instead of
+  "moon", and the Help tab documents solar-eclipse support (tested less
+  than lunar; totality with the filter removed isn't supported).
 
 ## [1.1.0] - 2026-08-31
 
@@ -64,9 +78,10 @@ versioning follows [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH
   - `extract_frames.py` / `build_video.py` — pull individual stills
     (sharpest per time window) and reassemble a chosen subset into a fresh,
     stabilized, deflickered video.
-- Automatic cloud-cutoff scoring (`moonlib.track.suggest_min_score`) so the
+- Automatic cloud-cutoff scoring (`eclipselib.track.suggest_min_score`) so the
   GUI needs no manual threshold tuning.
 
+[1.2.0]: #120---2026-08-31
 [1.1.0]: #110---2026-08-31
 [1.0.1]: #101---2026-08-31
 [1.0.0]: #100---2026-08-30

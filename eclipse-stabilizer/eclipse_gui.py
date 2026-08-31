@@ -12,9 +12,9 @@ from ttkbootstrap import ToolTip
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from moonlib.track import load_track, suggest_min_score
-from moonlib.video_io import ffprobe_info
-from moonlib.version import __version__
+from eclipselib.track import load_track, suggest_min_score
+from eclipselib.video_io import ffprobe_info
+from eclipselib.version import __version__
 
 # Imported directly (not shelled out via sys.executable) so this keeps
 # working once packaged into a standalone exe -- in a frozen build
@@ -69,10 +69,10 @@ def run_step(main_func, argv, on_line):
                 raise RuntimeError(str(e.code))
 
 
-class MoonGUI:
+class EclipseGUI:
     def __init__(self, root):
         self.root = root
-        root.title(f"Moon Eclipse Stabilizer v{__version__}")
+        root.title(f"Eclipse Stabilizer v{__version__}")
         root.geometry("920x680")
         root.minsize(760, 560)
 
@@ -82,7 +82,7 @@ class MoonGUI:
 
         header = tb.Frame(root, padding=(16, 12, 16, 0))
         header.pack(fill="x")
-        tb.Label(header, text="🌙 Moon Eclipse Stabilizer", font="-size 16 -weight bold").pack(side="left")
+        tb.Label(header, text="🔭 Eclipse Stabilizer", font="-size 16 -weight bold").pack(side="left")
         tb.Label(header, text=f"v{__version__}", bootstyle="secondary").pack(side="left", padx=(8, 0), pady=(6, 0))
 
         notebook = tb.Notebook(root, padding=(12, 8, 12, 12))
@@ -153,12 +153,12 @@ class MoonGUI:
         self.radius_var = tb.StringVar()
         self.min_score_var = tb.StringVar()
 
-        radius_label = tb.Label(adv, text="Moon radius (px):")
+        radius_label = tb.Label(adv, text="Disk radius (px):")
         radius_label.grid(row=0, column=0, sticky="w", padx=6, pady=4)
         radius_entry = tb.Entry(adv, textvariable=self.radius_var, width=10)
         radius_entry.grid(row=0, column=1, sticky="w")
         tb.Label(adv, text="blank = auto-detect", bootstyle="secondary").grid(row=0, column=2, sticky="w", padx=8)
-        radius_tip = "How big the moon is in the video, in pixels. Leave this blank — the app measures it from the footage itself. Only set it if auto-detection fails on unusual framing."
+        radius_tip = "How big the sun or moon is in the video, in pixels. Leave this blank — the app measures it from the footage itself. Only set it if auto-detection fails on unusual framing."
         ToolTip(radius_label, text=radius_tip, bootstyle="info")
         ToolTip(radius_entry, text=radius_tip, bootstyle="info")
 
@@ -422,9 +422,17 @@ class MoonGUI:
         bullet("When it says “Done!”, click Open Output Folder — your result is final.mp4 in there.")
 
         heading("What actually happens (3 steps)")
-        bullet("Analyzing: finds the moon in every frame and scores how sharp/clear each one is.")
-        bullet("Stabilizing: locks the moon to a fixed spot on screen and cuts out cloud-obscured stretches.")
+        bullet("Analyzing: finds the disk (sun or moon) in every frame and scores how sharp/clear each one is.")
+        bullet("Stabilizing: locks the disk to a fixed spot on screen and cuts out cloud-obscured stretches.")
         bullet("Removing field rotation: if your camera wasn't on a tracking mount, the sky slowly rotates over a long shoot — this straightens that back out.")
+
+        heading("Lunar and solar eclipses")
+        para("Built and tested on lunar eclipse timelapses, but the tracking itself just looks for a "
+             "bright, roughly circular disk of a known size against a darker background — it doesn't "
+             "care whether that's the moon or a filtered sun. A partial solar eclipse (the moon's bite "
+             "out of the sun's disk) should track the same way, though it's been tested less. Totality "
+             "with the solar filter removed — the corona, not a simple disk — is a different kind of "
+             "image this app was never built to track.")
 
         heading("Extract frames tab")
         para("Use this to pull individual still images out of a video — handy for a highlight reel or picking your best shots by hand.")
@@ -436,13 +444,13 @@ class MoonGUI:
         para("Turns a folder of still images back into a video — re-stabilizing and smoothing brightness as it goes. Useful after you've extracted frames and deleted the ones you don't want.")
 
         heading("The Advanced options, in plain language")
-        bullet("Moon radius (px): how big the moon is on screen. Leave blank — measured automatically from your footage. Only needed if detection struggles on very unusual framing.")
+        bullet("Disk radius (px): how big the sun or moon is on screen. Leave blank — measured automatically from your footage. Only needed if detection struggles on very unusual framing.")
         bullet("Cloud cutoff score: how strict to be about skipping blurry/cloud-covered frames. Leave blank for an automatic, sensible cutoff. Raise it if clouds are still slipping through; lower it if too much good footage is getting cut.")
 
         heading("If something goes wrong")
         bullet("Check the log panel under the progress bar — it shows exactly what each step printed, including the reason for any failure.")
-        bullet("“Modal radius” or detection issues on odd footage: try setting Moon radius manually once you know roughly how many pixels wide the moon is.")
-        bullet("Full technical details and the command-line tools live in this project's README.md and CHANGELOG.md, in the moon-eclipse-stabilizer folder.")
+        bullet("Detection issues on odd footage: try setting Disk radius manually once you know roughly how many pixels wide the sun/moon is.")
+        bullet("Full technical details and the command-line tools live in this project's README.md and CHANGELOG.md, in the eclipse-stabilizer folder.")
 
     # ---- queue polling / dispatch --------------------------------------------
     def _widgets_for(self, tag):
@@ -531,7 +539,7 @@ def main():
         _selftest(sys.argv[2])
         return
     root = tb.Window(theme=THEME)
-    MoonGUI(root)
+    EclipseGUI(root)
     root.mainloop()
 
 

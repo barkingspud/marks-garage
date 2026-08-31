@@ -8,5 +8,5 @@ CHANGELOG.
 
 | Project | What it does |
 |---|---|
-| [`moon-eclipse-stabilizer/`](moon-eclipse-stabilizer/) | Stabilizes shaky lunar eclipse timelapses — locks the moon to a fixed position, removes field rotation, skips cloud-obscured stretches. GUI + Windows installer, or CLI. |
+| [`eclipse-stabilizer/`](eclipse-stabilizer/) | Stabilizes shaky eclipse timelapses (lunar; solar untested) — locks the sun/moon to a fixed position, removes field rotation, skips cloud-obscured stretches. GUI + Windows installer, or CLI. |
 

@@ -33,8 +33,9 @@ def lit_mask(gray):
 def _limb_radius(gray):
     """Fit a circle to the outer boundary of the illuminated region.
 
-    Unlike area/pi, this is unbothered by the moon's own albedo variation:
-    the dark maria are interior holes in the bright mask, not gaps at the
+    Unlike area/pi, this is unbothered by the disk's own albedo variation
+    (e.g. the moon's dark maria or sunspots on the sun): the dark patches
+    are interior holes in the bright mask, not gaps at the
     limb, so the outer contour still traces the true disk edge and
     minEnclosingCircle recovers the right radius even with those holes
     punched out of the interior -- and even on a partial (non-full) disk,
@@ -142,8 +143,8 @@ def _barycenter(acc, py, px, offset_x, offset_y):
     )
 
 
-def detect_moon(gray, expected_radius, prev=None):
-    """Locate the moon disk by a directed Hough vote at a fixed radius.
+def detect_disk(gray, expected_radius, prev=None):
+    """Locate the eclipsed disk (sun or moon) by a directed Hough vote at a fixed radius.
 
     At each strong-edge point, the gradient's normal points toward
     increasing brightness -- on the disk's limb that means straight
@@ -157,7 +158,7 @@ def detect_moon(gray, expected_radius, prev=None):
     weight that landed in the winning peak.
     """
     if not expected_radius or expected_radius <= 0:
-        raise ValueError("detect_moon requires a known expected_radius")
+        raise ValueError("detect_disk requires a known expected_radius")
     r = float(expected_radius)
     h, w = gray.shape
     g = gray.astype(np.float32)

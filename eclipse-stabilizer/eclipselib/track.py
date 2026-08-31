@@ -5,7 +5,7 @@ import numpy as np
 
 def suggest_min_score(rows, percentile=10.0):
     """A reasonable default cloud/quality cutoff with no manual tuning:
-    the Nth percentile of edge_score among frames where the moon was
+    the Nth percentile of edge_score among frames where the disk was
     actually found. This sits just above the noise floor of otherwise-
     successful detections, cutting the weakest slice of legitimate
     detections along with everything already zeroed out (not-found,
@@ -36,9 +36,9 @@ def load_track(csv_path):
 
 def reject_outliers(rows, window=21, min_threshold=20.0, threshold_frac=0.08, max_passes=4):
     """A per-frame Hough match occasionally locks onto something that
-    isn't the moon (a cloud-lit patch, a lens artifact) rather than
-    failing outright -- it still passes as 'found' with a plausible
-    edge_score, but its position is wrong. The moon's true motion is
+    isn't the eclipsed disk (a cloud-lit patch, a lens artifact) rather
+    than failing outright -- it still passes as 'found' with a plausible
+    edge_score, but its position is wrong. The disk's true motion is
     smooth (camera drift, not teleportation), so any detection that
     jumps far from the local trend is almost certainly one of these
     false locks. Demote it to 'not found' so downstream interpolation
@@ -83,7 +83,7 @@ def reject_outliers(rows, window=21, min_threshold=20.0, threshold_frac=0.08, ma
 
 
 def smooth_positions(rows, max_gap=30):
-    """Interpolate through gaps where the moon wasn't found or was
+    """Interpolate through gaps where the disk wasn't found or was
     rejected as an outlier; otherwise pass the raw measured position
     through untouched.
 
@@ -111,7 +111,7 @@ def smooth_positions(rows, max_gap=30):
 
     idxs = np.where(found)[0]
     if len(idxs) == 0:
-        raise RuntimeError("no frames with a detected moon; cannot build a track")
+        raise RuntimeError("no frames with a detected disk; cannot build a track")
 
     cx_interp, cy_interp = cx.copy(), cy.copy()
     for i in range(n):

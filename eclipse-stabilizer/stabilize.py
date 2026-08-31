@@ -3,15 +3,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from moonlib.track import load_track, reject_outliers, smooth_positions
-from moonlib.video_io import frame_reader, ffprobe_info, FfmpegWriter
+from eclipselib.track import load_track, reject_outliers, smooth_positions
+from eclipselib.video_io import frame_reader, ffprobe_info, FfmpegWriter
 
 import cv2
 import numpy as np
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Stabilize a timelapse by re-centering the detected moon every frame.")
+    ap = argparse.ArgumentParser(description="Stabilize a timelapse by re-centering the detected disk every frame.")
     ap.add_argument("video")
     ap.add_argument("track_csv")
     ap.add_argument("-o", "--out", default="output/stabilized.mp4")
@@ -28,7 +28,7 @@ def main(argv=None):
     rows = load_track(args.track_csv)
     rows, n_outliers = reject_outliers(rows)
     if n_outliers:
-        print(f"rejected {n_outliers} position outliers (false locks on non-moon features)")
+        print(f"rejected {n_outliers} position outliers (false locks on features other than the eclipsed disk)")
     rows = smooth_positions(rows)
 
     kept = [r for r in rows if args.min_score is None or r["edge_score"] >= args.min_score]

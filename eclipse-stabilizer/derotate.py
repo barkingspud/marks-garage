@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from moonlib.rotation import estimate_rotation_increments, build_rotation_track
-from moonlib.video_io import frame_reader, ffprobe_info, FfmpegWriter
+from eclipselib.rotation import estimate_rotation_increments, build_rotation_track
+from eclipselib.video_io import frame_reader, ffprobe_info, FfmpegWriter
 
 import cv2
 import numpy as np

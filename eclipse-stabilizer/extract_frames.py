@@ -3,8 +3,8 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from moonlib.video_io import frame_reader
-from moonlib.track import load_track
+from eclipselib.video_io import frame_reader
+from eclipselib.track import load_track
 
 import cv2
 
