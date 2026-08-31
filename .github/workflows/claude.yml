@@ -19,10 +19,6 @@ jobs:
       - uses: actions/checkout@v6
       - uses: anthropics/claude-code-action@v1
         with:
-          # Requires one of these as a repo secret (Settings > Secrets and
-          # variables > Actions):
-          #   ANTHROPIC_API_KEY       -- pay-per-use, from platform.claude.com
-          #   CLAUDE_CODE_OAUTH_TOKEN -- uses a Pro/Max/Team subscription
-          #                              instead; get it via `claude setup-token`
-          # Swap the line below to claude_code_oauth_token if using that.
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Uses the Claude Pro subscription's usage quota (via a token from
+          # `claude setup-token`) rather than separate pay-per-use API billing.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
