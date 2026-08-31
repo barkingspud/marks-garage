@@ -22,6 +22,3 @@ jobs:
           # Uses the Claude Pro subscription's usage quota (via a token from
           # `claude setup-token`) rather than separate pay-per-use API billing.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Temporary: reveals the real error behind a generic is_error:true
-          # result. Remove once the integration is confirmed working.
-          show_full_output: true
