@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_data_files
 
-datas = collect_data_files("imageio_ffmpeg")
+datas = collect_data_files("imageio_ffmpeg") + collect_data_files("ttkbootstrap")
 
 a = Analysis(
     ["moon_gui.py"],
@@ -11,6 +11,9 @@ a = Analysis(
     hiddenimports=[
         "analyze", "stabilize", "derotate", "extract_frames", "build_video",
         "moonlib.detect", "moonlib.track", "moonlib.rotation", "moonlib.video_io",
+        "ttkbootstrap", "ttkbootstrap.themes", "ttkbootstrap.themes.standard",
+        "ttkbootstrap.themes.user", "ttkbootstrap.dialogs", "ttkbootstrap.scrolled",
+        "ttkbootstrap.tooltip", "ttkbootstrap.icons",
     ],
     hookspath=[],
     hooksconfig={},

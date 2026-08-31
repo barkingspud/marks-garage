@@ -4,8 +4,11 @@ import re
 import sys
 import threading
 from pathlib import Path
-from tkinter import Tk, StringVar, Text, filedialog, messagebox
-from tkinter import ttk
+from tkinter import filedialog, messagebox
+
+import ttkbootstrap as tb
+from ttkbootstrap.constants import *
+from ttkbootstrap import ToolTip
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -23,6 +26,7 @@ import derotate
 import extract_frames
 import stabilize
 
+THEME = "nord-dark"
 PROGRESS_RE = re.compile(r"(?:frame|wrote)\s+(\d+)")
 
 
@@ -69,82 +73,109 @@ class MoonGUI:
     def __init__(self, root):
         self.root = root
         root.title(f"Moon Eclipse Stabilizer v{__version__}")
-        root.geometry("760x600")
+        root.geometry("920x680")
+        root.minsize(760, 560)
 
         self.msg_queue = queue.Queue()
         self.worker = None
         self.current_proc_total = 0
 
-        notebook = ttk.Notebook(root)
-        notebook.pack(fill="both", expand=True, padx=8, pady=8)
+        header = tb.Frame(root, padding=(16, 12, 16, 0))
+        header.pack(fill="x")
+        tb.Label(header, text="🌙 Moon Eclipse Stabilizer", font="-size 16 -weight bold").pack(side="left")
+        tb.Label(header, text=f"v{__version__}", bootstyle="secondary").pack(side="left", padx=(8, 0), pady=(6, 0))
 
-        self.stabilize_tab = ttk.Frame(notebook)
-        self.extract_tab = ttk.Frame(notebook)
-        self.build_tab = ttk.Frame(notebook)
-        notebook.add(self.stabilize_tab, text="Stabilize video")
-        notebook.add(self.extract_tab, text="Extract frames")
-        notebook.add(self.build_tab, text="Build video from frames")
+        notebook = tb.Notebook(root, padding=(12, 8, 12, 12))
+        notebook.pack(fill="both", expand=True)
+
+        self.stabilize_tab = tb.Frame(notebook)
+        self.extract_tab = tb.Frame(notebook)
+        self.build_tab = tb.Frame(notebook)
+        self.help_tab = tb.Frame(notebook)
+        notebook.add(self.stabilize_tab, text="  Stabilize video  ")
+        notebook.add(self.extract_tab, text="  Extract frames  ")
+        notebook.add(self.build_tab, text="  Build video from frames  ")
+        notebook.add(self.help_tab, text="  ❓ Help  ")
 
         self._build_stabilize_tab()
         self._build_extract_tab()
         self._build_build_tab()
+        self._build_help_tab()
 
         self.root.after(80, self._poll_queue)
 
     # ---- shared log widget -------------------------------------------------
     def _add_log_and_progress(self, parent):
-        progress = ttk.Progressbar(parent, mode="determinate")
-        progress.pack(fill="x", padx=10, pady=(4, 0))
-        status = StringVar(value="Idle")
-        ttk.Label(parent, textvariable=status).pack(anchor="w", padx=10, pady=(2, 4))
+        progress = tb.Progressbar(parent, mode="determinate", bootstyle="info-striped")
+        progress.pack(fill="x", padx=4, pady=(8, 2))
+        status = tb.StringVar(value="Idle")
+        tb.Label(parent, textvariable=status, bootstyle="secondary").pack(anchor="w", padx=4, pady=(0, 6))
 
-        log_frame = ttk.Frame(parent)
-        log_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        text = Text(log_frame, height=14, wrap="word", state="disabled")
-        scroll = ttk.Scrollbar(log_frame, command=text.yview)
-        text.configure(yscrollcommand=scroll.set)
-        text.pack(side="left", fill="both", expand=True)
-        scroll.pack(side="right", fill="y")
+        text = tb.ScrolledText(parent, height=14, wrap="word", autohide=True, bootstyle="round")
+        text.pack(fill="both", expand=True, padx=4, pady=(0, 4))
+        text.text.configure(state="disabled", font="Consolas 9")
         return progress, status, text
 
     def _log(self, text_widget, line):
-        text_widget.configure(state="normal")
+        text_widget.text.configure(state="normal")
         text_widget.insert("end", line + "\n")
         text_widget.see("end")
-        text_widget.configure(state="disabled")
+        text_widget.text.configure(state="disabled")
 
     # ---- tab 1: stabilize ---------------------------------------------------
     def _build_stabilize_tab(self):
         tab = self.stabilize_tab
-        self.video_path = StringVar()
-        self.out_dir = StringVar()
+        self.video_path = tb.StringVar()
+        self.out_dir = tb.StringVar()
 
-        row = ttk.Frame(tab)
-        row.pack(fill="x", padx=10, pady=(10, 4))
-        ttk.Label(row, text="Video file:").pack(side="left")
-        ttk.Entry(row, textvariable=self.video_path).pack(side="left", fill="x", expand=True, padx=6)
-        ttk.Button(row, text="Browse...", command=self._pick_video).pack(side="left")
+        intro = tb.Label(
+            tab,
+            text="Pick your eclipse video and click Start. That's it — radius detection and "
+                 "cloud-stretch removal happen automatically. See the Help tab for details.",
+            bootstyle="secondary", wraplength=820, justify="left",
+        )
+        intro.pack(fill="x", padx=4, pady=(4, 10))
 
-        row2 = ttk.Frame(tab)
-        row2.pack(fill="x", padx=10, pady=4)
-        ttk.Label(row2, text="Output folder:").pack(side="left")
-        ttk.Entry(row2, textvariable=self.out_dir).pack(side="left", fill="x", expand=True, padx=6)
-        ttk.Button(row2, text="Browse...", command=self._pick_out_dir).pack(side="left")
+        row = tb.Frame(tab)
+        row.pack(fill="x", padx=4, pady=4)
+        tb.Label(row, text="Video file:", width=14).pack(side="left")
+        tb.Entry(row, textvariable=self.video_path).pack(side="left", fill="x", expand=True, padx=6)
+        tb.Button(row, text="Browse...", command=self._pick_video, bootstyle="secondary-outline").pack(side="left")
 
-        adv = ttk.LabelFrame(tab, text="Advanced (optional)")
-        adv.pack(fill="x", padx=10, pady=6)
-        self.radius_var = StringVar()
-        self.min_score_var = StringVar()
-        ttk.Label(adv, text="Moon radius (px, blank = auto-detect):").grid(row=0, column=0, sticky="w", padx=6, pady=4)
-        ttk.Entry(adv, textvariable=self.radius_var, width=10).grid(row=0, column=1, sticky="w")
-        ttk.Label(adv, text="Cloud cutoff score (blank = auto):").grid(row=1, column=0, sticky="w", padx=6, pady=4)
-        ttk.Entry(adv, textvariable=self.min_score_var, width=10).grid(row=1, column=1, sticky="w")
+        row2 = tb.Frame(tab)
+        row2.pack(fill="x", padx=4, pady=4)
+        tb.Label(row2, text="Output folder:", width=14).pack(side="left")
+        tb.Entry(row2, textvariable=self.out_dir).pack(side="left", fill="x", expand=True, padx=6)
+        tb.Button(row2, text="Browse...", command=self._pick_out_dir, bootstyle="secondary-outline").pack(side="left")
 
-        btn_row = ttk.Frame(tab)
-        btn_row.pack(fill="x", padx=10, pady=6)
-        self.start_btn = ttk.Button(btn_row, text="Start Processing", command=self._start_stabilize)
+        adv = tb.LabelFrame(tab, text="Advanced (optional)", padding=10)
+        adv.pack(fill="x", padx=4, pady=10)
+        self.radius_var = tb.StringVar()
+        self.min_score_var = tb.StringVar()
+
+        radius_label = tb.Label(adv, text="Moon radius (px):")
+        radius_label.grid(row=0, column=0, sticky="w", padx=6, pady=4)
+        radius_entry = tb.Entry(adv, textvariable=self.radius_var, width=10)
+        radius_entry.grid(row=0, column=1, sticky="w")
+        tb.Label(adv, text="blank = auto-detect", bootstyle="secondary").grid(row=0, column=2, sticky="w", padx=8)
+        radius_tip = "How big the moon is in the video, in pixels. Leave this blank — the app measures it from the footage itself. Only set it if auto-detection fails on unusual framing."
+        ToolTip(radius_label, text=radius_tip, bootstyle="info")
+        ToolTip(radius_entry, text=radius_tip, bootstyle="info")
+
+        score_label = tb.Label(adv, text="Cloud cutoff score:")
+        score_label.grid(row=1, column=0, sticky="w", padx=6, pady=4)
+        score_entry = tb.Entry(adv, textvariable=self.min_score_var, width=10)
+        score_entry.grid(row=1, column=1, sticky="w")
+        tb.Label(adv, text="blank = auto", bootstyle="secondary").grid(row=1, column=2, sticky="w", padx=8)
+        score_tip = "How sharp/clear a frame must be to keep. Frames below this are treated as cloud-obscured and skipped. Leave blank — the app picks a sensible cutoff from your footage's own quality spread. Raise it to cut more aggressively."
+        ToolTip(score_label, text=score_tip, bootstyle="info")
+        ToolTip(score_entry, text=score_tip, bootstyle="info")
+
+        btn_row = tb.Frame(tab)
+        btn_row.pack(fill="x", padx=4, pady=(4, 6))
+        self.start_btn = tb.Button(btn_row, text="▶  Start Processing", command=self._start_stabilize, bootstyle="primary")
         self.start_btn.pack(side="left")
-        self.open_folder_btn = ttk.Button(btn_row, text="Open Output Folder", command=self._open_output, state="disabled")
+        self.open_folder_btn = tb.Button(btn_row, text="Open Output Folder", command=self._open_output, state="disabled", bootstyle="success-outline")
         self.open_folder_btn.pack(side="left", padx=6)
 
         self.stab_progress, self.stab_status, self.stab_log = self._add_log_and_progress(tab)
@@ -220,36 +251,42 @@ class MoonGUI:
     # ---- tab 2: extract frames ----------------------------------------------
     def _build_extract_tab(self):
         tab = self.extract_tab
-        self.ex_video = StringVar()
-        self.ex_track = StringVar()
-        self.ex_out = StringVar()
-        self.ex_interval = StringVar(value="1.0")
+        self.ex_video = tb.StringVar()
+        self.ex_track = tb.StringVar()
+        self.ex_out = tb.StringVar()
+        self.ex_interval = tb.StringVar(value="1.0")
 
-        row = ttk.Frame(tab)
-        row.pack(fill="x", padx=10, pady=(10, 4))
-        ttk.Label(row, text="Video file:").pack(side="left")
-        ttk.Entry(row, textvariable=self.ex_video).pack(side="left", fill="x", expand=True, padx=6)
-        ttk.Button(row, text="Browse...", command=lambda: self._pick_file(self.ex_video)).pack(side="left")
+        tb.Label(
+            tab,
+            text="Pull individual still frames from a video — the sharpest frame within each time window.",
+            bootstyle="secondary", wraplength=820, justify="left",
+        ).pack(fill="x", padx=4, pady=(4, 10))
 
-        row2 = ttk.Frame(tab)
-        row2.pack(fill="x", padx=10, pady=4)
-        ttk.Label(row2, text="Track CSV (from Stabilize tab):").pack(side="left")
-        ttk.Entry(row2, textvariable=self.ex_track).pack(side="left", fill="x", expand=True, padx=6)
-        ttk.Button(row2, text="Browse...", command=lambda: self._pick_file(self.ex_track, [("CSV", "*.csv")])).pack(side="left")
+        row = tb.Frame(tab)
+        row.pack(fill="x", padx=4, pady=4)
+        tb.Label(row, text="Video file:", width=20).pack(side="left")
+        tb.Entry(row, textvariable=self.ex_video).pack(side="left", fill="x", expand=True, padx=6)
+        tb.Button(row, text="Browse...", command=lambda: self._pick_file(self.ex_video), bootstyle="secondary-outline").pack(side="left")
 
-        row3 = ttk.Frame(tab)
-        row3.pack(fill="x", padx=10, pady=4)
-        ttk.Label(row3, text="One frame every").pack(side="left")
-        ttk.Entry(row3, textvariable=self.ex_interval, width=6).pack(side="left", padx=4)
-        ttk.Label(row3, text="seconds (sharpest in each window)").pack(side="left")
+        row2 = tb.Frame(tab)
+        row2.pack(fill="x", padx=4, pady=4)
+        tb.Label(row2, text="Track CSV (from Stabilize tab):", width=20).pack(side="left")
+        tb.Entry(row2, textvariable=self.ex_track).pack(side="left", fill="x", expand=True, padx=6)
+        tb.Button(row2, text="Browse...", command=lambda: self._pick_file(self.ex_track, [("CSV", "*.csv")]), bootstyle="secondary-outline").pack(side="left")
 
-        row4 = ttk.Frame(tab)
-        row4.pack(fill="x", padx=10, pady=4)
-        ttk.Label(row4, text="Save frames to:").pack(side="left")
-        ttk.Entry(row4, textvariable=self.ex_out).pack(side="left", fill="x", expand=True, padx=6)
-        ttk.Button(row4, text="Browse...", command=self._pick_ex_out).pack(side="left")
+        row3 = tb.Frame(tab)
+        row3.pack(fill="x", padx=4, pady=4)
+        tb.Label(row3, text="One frame every").pack(side="left")
+        tb.Entry(row3, textvariable=self.ex_interval, width=6).pack(side="left", padx=4)
+        tb.Label(row3, text="seconds (sharpest in each window)").pack(side="left")
 
-        ttk.Button(tab, text="Extract Frames", command=self._start_extract).pack(anchor="w", padx=10, pady=6)
+        row4 = tb.Frame(tab)
+        row4.pack(fill="x", padx=4, pady=4)
+        tb.Label(row4, text="Save frames to:", width=20).pack(side="left")
+        tb.Entry(row4, textvariable=self.ex_out).pack(side="left", fill="x", expand=True, padx=6)
+        tb.Button(row4, text="Browse...", command=self._pick_ex_out, bootstyle="secondary-outline").pack(side="left")
+
+        tb.Button(tab, text="Extract Frames", command=self._start_extract, bootstyle="primary").pack(anchor="w", padx=4, pady=(6, 6))
         self.ex_progress, self.ex_status, self.ex_log = self._add_log_and_progress(tab)
 
     def _pick_file(self, var, types=None):
@@ -294,28 +331,34 @@ class MoonGUI:
     # ---- tab 3: build video from frames --------------------------------------
     def _build_build_tab(self):
         tab = self.build_tab
-        self.bv_frames_dir = StringVar()
-        self.bv_out = StringVar()
-        self.bv_fps = StringVar(value="24")
+        self.bv_frames_dir = tb.StringVar()
+        self.bv_out = tb.StringVar()
+        self.bv_fps = tb.StringVar(value="24")
 
-        row = ttk.Frame(tab)
-        row.pack(fill="x", padx=10, pady=(10, 4))
-        ttk.Label(row, text="Frames folder:").pack(side="left")
-        ttk.Entry(row, textvariable=self.bv_frames_dir).pack(side="left", fill="x", expand=True, padx=6)
-        ttk.Button(row, text="Browse...", command=self._pick_bv_frames).pack(side="left")
+        tb.Label(
+            tab,
+            text="Reassemble a folder of still frames (e.g. ones you extracted and hand-picked) into a fresh, stabilized, deflickered video.",
+            bootstyle="secondary", wraplength=820, justify="left",
+        ).pack(fill="x", padx=4, pady=(4, 10))
 
-        row2 = ttk.Frame(tab)
-        row2.pack(fill="x", padx=10, pady=4)
-        ttk.Label(row2, text="Playback speed (fps):").pack(side="left")
-        ttk.Entry(row2, textvariable=self.bv_fps, width=6).pack(side="left", padx=4)
+        row = tb.Frame(tab)
+        row.pack(fill="x", padx=4, pady=4)
+        tb.Label(row, text="Frames folder:", width=16).pack(side="left")
+        tb.Entry(row, textvariable=self.bv_frames_dir).pack(side="left", fill="x", expand=True, padx=6)
+        tb.Button(row, text="Browse...", command=self._pick_bv_frames, bootstyle="secondary-outline").pack(side="left")
 
-        row3 = ttk.Frame(tab)
-        row3.pack(fill="x", padx=10, pady=4)
-        ttk.Label(row3, text="Save video as:").pack(side="left")
-        ttk.Entry(row3, textvariable=self.bv_out).pack(side="left", fill="x", expand=True, padx=6)
-        ttk.Button(row3, text="Browse...", command=self._pick_bv_out).pack(side="left")
+        row2 = tb.Frame(tab)
+        row2.pack(fill="x", padx=4, pady=4)
+        tb.Label(row2, text="Playback speed (fps):", width=16).pack(side="left")
+        tb.Entry(row2, textvariable=self.bv_fps, width=6).pack(side="left", padx=4)
 
-        ttk.Button(tab, text="Build Video", command=self._start_build).pack(anchor="w", padx=10, pady=6)
+        row3 = tb.Frame(tab)
+        row3.pack(fill="x", padx=4, pady=4)
+        tb.Label(row3, text="Save video as:", width=16).pack(side="left")
+        tb.Entry(row3, textvariable=self.bv_out).pack(side="left", fill="x", expand=True, padx=6)
+        tb.Button(row3, text="Browse...", command=self._pick_bv_out, bootstyle="secondary-outline").pack(side="left")
+
+        tb.Button(tab, text="Build Video", command=self._start_build, bootstyle="primary").pack(anchor="w", padx=4, pady=(6, 6))
         self.bv_progress, self.bv_status, self.bv_log = self._add_log_and_progress(tab)
 
     def _pick_bv_frames(self):
@@ -353,6 +396,53 @@ class MoonGUI:
             q.put(("done", "bv", str(Path(out).parent)))
         except Exception as e:
             q.put(("error", "bv", str(e)))
+
+    # ---- tab 4: help ----------------------------------------------------------
+    def _build_help_tab(self):
+        tab = self.help_tab
+        scroller = tb.ScrolledFrame(tab, autohide=True)
+        scroller.pack(fill="both", expand=True)
+        body = scroller
+
+        def heading(text):
+            tb.Label(body, text=text, font="-size 12 -weight bold", bootstyle="info").pack(anchor="w", pady=(14, 4))
+
+        def para(text):
+            tb.Label(body, text=text, wraplength=780, justify="left").pack(anchor="w", pady=(0, 2))
+
+        def bullet(text):
+            tb.Label(body, text="•  " + text, wraplength=780, justify="left").pack(anchor="w", pady=1)
+
+        tb.Label(body, text="Getting started", font="-size 14 -weight bold").pack(anchor="w", pady=(6, 4))
+        para("First time using this? Here's the whole workflow in one pass:")
+        bullet("Go to the Stabilize video tab.")
+        bullet("Click Browse and pick your eclipse video file.")
+        bullet("Click ▶ Start Processing. Leave the Advanced fields blank — they're auto-detected.")
+        bullet("Watch the log below for progress. A long video can take several minutes; the app is still working even if it looks paused between updates.")
+        bullet("When it says “Done!”, click Open Output Folder — your result is final.mp4 in there.")
+
+        heading("What actually happens (3 steps)")
+        bullet("Analyzing: finds the moon in every frame and scores how sharp/clear each one is.")
+        bullet("Stabilizing: locks the moon to a fixed spot on screen and cuts out cloud-obscured stretches.")
+        bullet("Removing field rotation: if your camera wasn't on a tracking mount, the sky slowly rotates over a long shoot — this straightens that back out.")
+
+        heading("Extract frames tab")
+        para("Use this to pull individual still images out of a video — handy for a highlight reel or picking your best shots by hand.")
+        bullet("Video file: the source video (can be your original, or a stabilized result).")
+        bullet("Track CSV: the position file created in the Stabilize tab (named track.csv in that run's output folder). Required.")
+        bullet("One frame every N seconds: how often to grab a frame — the sharpest one within each window is kept automatically.")
+
+        heading("Build video from frames tab")
+        para("Turns a folder of still images back into a video — re-stabilizing and smoothing brightness as it goes. Useful after you've extracted frames and deleted the ones you don't want.")
+
+        heading("The Advanced options, in plain language")
+        bullet("Moon radius (px): how big the moon is on screen. Leave blank — measured automatically from your footage. Only needed if detection struggles on very unusual framing.")
+        bullet("Cloud cutoff score: how strict to be about skipping blurry/cloud-covered frames. Leave blank for an automatic, sensible cutoff. Raise it if clouds are still slipping through; lower it if too much good footage is getting cut.")
+
+        heading("If something goes wrong")
+        bullet("Check the log panel under the progress bar — it shows exactly what each step printed, including the reason for any failure.")
+        bullet("“Modal radius” or detection issues on odd footage: try setting Moon radius manually once you know roughly how many pixels wide the moon is.")
+        bullet("Full technical details and the command-line tools live in this project's README.md and CHANGELOG.md, in the moon-eclipse-stabilizer folder.")
 
     # ---- queue polling / dispatch --------------------------------------------
     def _widgets_for(self, tag):
@@ -440,7 +530,7 @@ def main():
     if len(sys.argv) >= 3 and sys.argv[1] == "--selftest":
         _selftest(sys.argv[2])
         return
-    root = Tk()
+    root = tb.Window(theme=THEME)
     MoonGUI(root)
     root.mainloop()
 

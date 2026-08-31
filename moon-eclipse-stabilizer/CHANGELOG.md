@@ -4,6 +4,19 @@ All notable changes to Moon Eclipse Stabilizer are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH).
 
+## [1.1.0] - 2026-08-31
+
+### Added
+- Modernized the GUI with [ttkbootstrap](https://ttkbootstrap.readthedocs.io/)
+  (dark "nord" theme) — the plain-`ttk` 1990s look is gone.
+- New **Help** tab with a plain-language walkthrough of every tab and each
+  Advanced option, so a first-time user doesn't need to read the README.
+- Tooltips on the Moon radius and Cloud cutoff score fields explaining what
+  they do and when (if ever) to touch them.
+
+### Changed
+- Window title/header now shows the app version at a glance.
+
 ## [1.0.1] - 2026-08-31
 
 ### Fixed
@@ -54,5 +67,6 @@ versioning follows [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH
 - Automatic cloud-cutoff scoring (`moonlib.track.suggest_min_score`) so the
   GUI needs no manual threshold tuning.
 
+[1.1.0]: #110---2026-08-31
 [1.0.1]: #101---2026-08-31
 [1.0.0]: #100---2026-08-30
