@@ -1,0 +1,110 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "realisticVisionV60B1_v51VAE.safetensors" },
+    "_meta": { "title": "Any realistic SD1.5 checkpoint" }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "person.png" },
+    "_meta": { "title": "Reference: the person + outfit to keep" }
+  },
+  "3": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "pose_reference.png" },
+    "_meta": { "title": "Pose reference: any photo with the pose you want" }
+  },
+  "4": {
+    "class_type": "OpenposePreprocessor",
+    "inputs": {
+      "image": ["3", 0],
+      "detect_hand": "enable",
+      "detect_body": "enable",
+      "detect_face": "enable",
+      "resolution": 768
+    },
+    "_meta": { "title": "Extract skeleton (or bypass and load your own skeleton image)" }
+  },
+  "5": {
+    "class_type": "ControlNetLoader",
+    "inputs": { "control_net_name": "control_v11p_sd15_openpose.pth" }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "photo of a person, same clothing, natural skin, detailed hands and feet, soft lighting"
+    },
+    "_meta": { "title": "Positive (describe person/outfit/scene)" }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "blurry, deformed, extra fingers, missing fingers, bad hands, bad feet, bad anatomy, text, watermark"
+    },
+    "_meta": { "title": "Negative" }
+  },
+  "8": {
+    "class_type": "ControlNetApplyAdvanced",
+    "inputs": {
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "control_net": ["5", 0],
+      "image": ["4", 0],
+      "strength": 0.9,
+      "start_percent": 0.0,
+      "end_percent": 1.0
+    }
+  },
+  "9": {
+    "class_type": "IPAdapterUnifiedLoader",
+    "inputs": { "model": ["1", 0], "preset": "PLUS FACE (portraits)" },
+    "_meta": { "title": "Use 'PLUS (high strength)' to favour outfit over face" }
+  },
+  "10": {
+    "class_type": "IPAdapter",
+    "inputs": {
+      "model": ["9", 0],
+      "ipadapter": ["9", 1],
+      "image": ["2", 0],
+      "weight": 0.8,
+      "start_at": 0.0,
+      "end_at": 1.0,
+      "weight_type": "standard"
+    }
+  },
+  "11": {
+    "class_type": "EmptyLatentImage",
+    "inputs": { "width": 512, "height": 768, "batch_size": 2 },
+    "_meta": { "title": "Match the aspect ratio of the pose reference; batch 2 = two variants" }
+  },
+  "12": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["10", 0],
+      "positive": ["8", 0],
+      "negative": ["8", 1],
+      "latent_image": ["11", 0],
+      "seed": 1234,
+      "steps": 28,
+      "cfg": 6.5,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0
+    }
+  },
+  "13": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["12", 0], "vae": ["1", 2] }
+  },
+  "14": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["13", 0], "filename_prefix": "pose_change" }
+  },
+  "15": {
+    "class_type": "PreviewImage",
+    "inputs": { "images": ["4", 0] },
+    "_meta": { "title": "Check the extracted skeleton looks right" }
+  }
+}

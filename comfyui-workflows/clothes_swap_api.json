@@ -1,0 +1,104 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "sd-v1-5-inpainting.safetensors" },
+    "_meta": { "title": "SD1.5 INPAINTING checkpoint (must be an inpainting model)" }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "person.png" },
+    "_meta": { "title": "Reference photo" }
+  },
+  "3": {
+    "class_type": "ImageScaleToTotalPixels",
+    "inputs": { "image": ["2", 0], "upscale_method": "lanczos", "megapixels": 0.6 },
+    "_meta": { "title": "Scale to ~0.6 MP (keeps VRAM under 6 GB)" }
+  },
+  "4": {
+    "class_type": "GroundingDinoModelLoader (segment anything)",
+    "inputs": { "model_name": "GroundingDINO_SwinT_OGC (694MB)" }
+  },
+  "5": {
+    "class_type": "SAMModelLoader (segment anything)",
+    "inputs": { "model_name": "sam_vit_b (375MB)" }
+  },
+  "6": {
+    "class_type": "GroundingDinoSAMSegment (segment anything)",
+    "inputs": {
+      "grounding_dino_model": ["4", 0],
+      "sam_model": ["5", 0],
+      "image": ["3", 0],
+      "prompt": "shirt . jacket . top",
+      "threshold": 0.3
+    },
+    "_meta": { "title": "Auto-mask the garment (edit the text: pants, shoes, dress...)" }
+  },
+  "7": {
+    "class_type": "GrowMask",
+    "inputs": { "mask": ["6", 1], "expand": 12, "tapered_corners": true },
+    "_meta": { "title": "Grow mask a little so edges blend" }
+  },
+  "8": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "red leather jacket over a white t-shirt, detailed fabric, natural lighting, photo"
+    },
+    "_meta": { "title": "New outfit (positive)" }
+  },
+  "9": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "blurry, deformed, extra limbs, bad anatomy, text, watermark"
+    },
+    "_meta": { "title": "Negative" }
+  },
+  "10": {
+    "class_type": "InpaintModelConditioning",
+    "inputs": {
+      "positive": ["8", 0],
+      "negative": ["9", 0],
+      "vae": ["1", 2],
+      "pixels": ["3", 0],
+      "mask": ["7", 0],
+      "noise_mask": true
+    }
+  },
+  "11": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["1", 0],
+      "positive": ["10", 0],
+      "negative": ["10", 1],
+      "latent_image": ["10", 2],
+      "seed": 1234,
+      "steps": 28,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 0.95
+    },
+    "_meta": { "title": "denoise 0.8-1.0 = new outfit; lower keeps more of the old one" }
+  },
+  "12": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["11", 0], "vae": ["1", 2] }
+  },
+  "13": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": ["3", 0],
+      "source": ["12", 0],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": ["7", 0]
+    },
+    "_meta": { "title": "Paste only the masked area back, so face/background stay pixel-identical" }
+  },
+  "14": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["13", 0], "filename_prefix": "clothes_swap" }
+  }
+}
