@@ -52,4 +52,13 @@ describe('rankCandidates', () => {
     ], p, new Set(), new Set());
     expect(out[0]!.releaseId).toBe(71);
   });
+  it('caps picks per artist', () => {
+    const p = buildTasteProfile(collection);
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      masterId: 5000 + i, title: `x${i}`, artist: i % 2 ? 'Kiss' : 'Kiss, Ace Frehley', styles: ['Techno'], sources: ['s'],
+    }));
+    const r = rankCandidates([...many, { masterId: 6000, title: 'y', artist: 'Other', sources: ['s'] }], p, new Set(), new Set(), 50, 3);
+    expect(r.filter((x) => x.artist.startsWith('Kiss'))).toHaveLength(3);
+    expect(r.some((x) => x.artist === 'Other')).toBe(true);
+  });
 });

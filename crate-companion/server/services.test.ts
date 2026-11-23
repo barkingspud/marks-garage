@@ -20,6 +20,8 @@ describe('services against mock Discogs', () => {
     const r = await buildRecommendations(api, 'demo_digger', { artists: 4, labels: 2, styles: 3 }, noop);
     expect(r.recommendations.length).toBeGreaterThan(5);
     expect(r.profile.topArtists.length).toBe(4);
+    expect(r.recommendations.some((x) => x.labelId)).toBe(true);
+    expect(r.recommendations.every((x) => x.artist !== 'Various')).toBe(true);
   });
 });
 
@@ -27,6 +29,7 @@ describe('splitTitle', () => {
   it('splits search titles and cleans Discogs artist suffixes and stray spaces', () => {
     expect(splitTitle('Steve Perry - Traces ')).toEqual({ artist: 'Steve Perry', title: 'Traces' });
     expect(splitTitle('UFO (5) - Doctor Doctor')).toEqual({ artist: 'UFO', title: 'Doctor Doctor' });
+    expect(splitTitle('Iggy And The Stooges* - Raw Power')).toEqual({ artist: 'Iggy And The Stooges', title: 'Raw Power' });
     expect(splitTitle('Untitled')).toEqual({ artist: '', title: 'Untitled' });
   });
 });

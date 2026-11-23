@@ -8,10 +8,13 @@ Field mappings checked against the live Discogs API.
   max-price rule and the market-floor score, and shows the seller's original price as well.
 - Seller match covers now show (the API calls the field `release.thumbnail`).
 - Taste profile counts each label once per release, even when it's listed for each catalog number.
-- Recommendations from style searches drop Discogs' " (2)" artist suffixes and stray spaces,
-  and label picks use community want/have counts.
+- Recommendations from searches drop Discogs' " (2)" artist suffixes and stray spaces.
 - Seller match ships-from filter now defaults to the United States, ignores case, accepts
   abbreviations like "US"/"USA"/"UK", and lets you type commas to list several countries.
+- Label recommendations now search each top label for its most-collected masters in the
+  style you collect most on that label, instead of the first page of the label's raw catalog
+  (which was mostly compilations and unrelated records). Recommendations are capped at 3 per
+  artist, and the "*" Discogs adds to name variations is dropped.
 - Types updated: `curr_abbr` on profiles, collection custom-field `notes`, listing `original_price`.
 
 ## 0.1.0 (2026-11-23)

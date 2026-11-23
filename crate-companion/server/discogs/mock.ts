@@ -191,12 +191,14 @@ export class MockDiscogs implements DiscogsApi {
     const [from, to] = (params.year ?? '').split('-').map(Number);
     const items: SearchResult[] = catalog
       .filter((b) => (!params.style || b.styles?.includes(params.style)) && (!params.genre || b.genres?.includes(params.genre)))
+      .filter((b) => !params.label || b.labels.some((l) => l.name === params.label))
       .filter((b) => !from || (b.year >= from && b.year <= (to || from)))
       .map((b) => ({
         id: b.master_id, type: 'master', master_id: b.master_id, title: `${b.artists[0]!.name} - ${b.title}`,
         year: String(b.year), genre: b.genres, style: b.styles, label: [b.labels[0]!.name], format: ['Vinyl', 'LP'],
         thumb: '', community: b.community,
       }));
+    if (params.sort === 'have') items.sort((a, b) => (b.community?.have ?? 0) - (a.community?.have ?? 0));
     const { pagination, items: results } = page(items, params.page ?? 1, params.per_page ?? 50);
     return { pagination, results };
   }

@@ -13,6 +13,10 @@ export interface SearchParams {
   year?: string;     // "1995" or "1990-1999"
   format?: string;
   country?: string;
+  /** Label name (matched by name, not id). */
+  label?: string;
+  sort?: 'have' | 'want' | 'year' | 'title';
+  sort_order?: 'asc' | 'desc';
   per_page?: number;
   page?: number;
 }

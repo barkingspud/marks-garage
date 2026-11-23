@@ -18,7 +18,8 @@
    for more, and placeholders like "Various" and "Not On Label" are ignored.
 2. **Candidates** come from three sources (about 13 API calls, cached 24 h):
    - discographies of your top artists (`/artists/{id}/releases`, main roles only);
-   - catalogs of your top labels (`/labels/{id}/releases`);
+   - the most-collected masters on your top labels, in the style you collect most on each
+     (`/database/search?label=…&style=…&sort=have`);
    - masters in your top styles (`/database/search?style=…&type=master`).
 3. **Filter** out anything you own or already want (matched by release *and* master, so other
    pressings don't come back).
@@ -46,10 +47,14 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
       profile currency is `curr_abbr`; releases that list a label once per catalog number
       no longer double-count it; search titles lose trailing spaces and ` (2)` suffixes;
       label-release candidates now use their `stats.community`.
-- [ ] Recommendation quality: label catalogs (page 1 of `/labels/{id}/releases`) are
-      mostly unrelated or "Various" compilations for big labels like Warner Bros. (160k
-      releases) and never reach the top 60. Filter by artist "Various", or replace with a
-      `/database/search?label=…&style=…` query. Artist discographies include singles.
+- [x] Label recommendations: page 1 of `/labels/{id}/releases` was mostly unrelated or
+      "Various" compilations for big labels (Warner Bros. has 160k releases), so no label
+      pick ever reached the top 60. Now a `/database/search?label=…&style=…&type=master&sort=have`
+      query per top label, using the style you collect most on that label, with "Various"
+      dropped and at most 3 picks per artist. Live result: 48 of 60 picks come from labels.
+      Caveat: search matches the label *name* anywhere on a release, so club pressings
+      (e.g. Columbia House) bring in other labels' artists.
+- [ ] Artist discographies include singles (e.g. "D'yer Mak'er"); prefer albums.
 - [ ] Persistent cache (SQLite) so restarts don't re-fetch everything, plus incremental
       collection sync.
 - [ ] Wantlist notes and a per-item "max price"/"min grade" that overrides the global criteria.

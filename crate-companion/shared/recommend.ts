@@ -8,6 +8,8 @@ export interface TasteProfile {
   styles: Map<string, number>;
   genres: Map<string, number>;
   decades: Map<number, number>;
+  /** Styles you collect on each label, so label picks can stay in your lane. */
+  labelStyles: Map<number, Map<string, number>>;
   ownedReleaseIds: Set<number>;
   ownedMasterIds: Set<number>;
 }
@@ -32,7 +34,7 @@ function itemWeight(rating: number): number {
 export function buildTasteProfile(collection: CollectionItem[]): TasteProfile {
   const p: TasteProfile = {
     total: collection.length,
-    artists: new Map(), labels: new Map(), styles: new Map(), genres: new Map(), decades: new Map(),
+    artists: new Map(), labels: new Map(), styles: new Map(), genres: new Map(), decades: new Map(), labelStyles: new Map(),
     ownedReleaseIds: new Set(), ownedMasterIds: new Set(),
   };
   for (const item of collection) {
@@ -51,6 +53,9 @@ export function buildTasteProfile(collection: CollectionItem[]): TasteProfile {
       if (IGNORED_LABELS.has(l.id)) continue;
       const cur = p.labels.get(l.id);
       p.labels.set(l.id, { name: l.name, weight: (cur?.weight ?? 0) + w });
+      let ls = p.labelStyles.get(l.id);
+      if (!ls) p.labelStyles.set(l.id, (ls = new Map()));
+      for (const s of b.styles ?? []) bump(ls, s, w);
     }
     for (const s of b.styles ?? []) bump(p.styles, s, w);
     for (const g of b.genres ?? []) bump(p.genres, g, w);
@@ -145,8 +150,10 @@ export function rankCandidates(
   wantedReleaseIds: Set<number>,
   wantedMasterIds: Set<number>,
   limit = 50,
+  maxPerArtist = 3,
 ): Recommendation[] {
   const merged = new Map<string, Candidate>();
+  const perArtist = new Map<string, number>();
   for (const c of candidates) {
     if (c.releaseId && (p.ownedReleaseIds.has(c.releaseId) || wantedReleaseIds.has(c.releaseId))) continue;
     if (c.masterId && (p.ownedMasterIds.has(c.masterId) || wantedMasterIds.has(c.masterId))) continue;
@@ -172,5 +179,12 @@ export function rankCandidates(
       return r;
     })
     .sort((a, b) => b.score - a.score)
+    // Keep the list varied: a label search can return a dozen records by one band.
+    .filter((r) => {
+      const k = r.artist.split(', ')[0]!.trim().toLowerCase(); // "Kiss, Ace Frehley" counts as Kiss
+      const seen = perArtist.get(k) ?? 0;
+      perArtist.set(k, seen + 1);
+      return !k || seen < maxPerArtist;
+    })
     .slice(0, limit);
 }

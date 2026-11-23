@@ -116,7 +116,9 @@ export interface RecommendOptions { artists: number; labels: number; styles: num
 export function splitTitle(t: string): { artist: string; title: string } {
   const i = t.indexOf(' - ');
   if (i <= 0) return { artist: '', title: t.trim() };
-  return { artist: t.slice(0, i).replace(/\s+\(\d+\)$/, '').trim(), title: t.slice(i + 3).trim() };
+  // "Iggy And The Stooges*": the asterisk marks an artist name variation.
+  const artist = t.slice(0, i).trim().replace(/\*$/, '').replace(/\s+\(\d+\)$/, '');
+  return { artist, title: t.slice(i + 3).trim() };
 }
 
 export async function buildRecommendations(
@@ -150,15 +152,22 @@ export async function buildRecommendations(
       });
     }
   }
+  // A big label's raw catalog (/labels/{id}/releases) is mostly compilations and records
+  // unrelated to your taste, so search the label's masters in the style you collect most on
+  // it, most-collected first.
   for (const l of labels) {
     progress(done++, total, `Exploring ${l.name}…`);
-    const r = await api.labelReleases(l.id).catch(() => undefined);
-    for (const rel of r?.releases ?? []) {
+    const style = topN(profile.labelStyles.get(l.id) ?? new Map<string, number>(), 1)[0]?.[0] ?? styles[0]?.[0];
+    const r = await api.search({
+      label: l.name, style, type: 'master', per_page: 50, sort: 'have', sort_order: 'desc',
+    }).catch(() => undefined);
+    for (const s of r?.results ?? []) {
+      const { artist, title } = splitTitle(s.title);
+      if (!artist || /^various$/i.test(artist)) continue;
       candidates.push({
-        releaseId: rel.id, title: rel.title, artist: rel.artist, year: rel.year, thumb: rel.thumb, labelId: l.id,
-        community: rel.stats?.community
-          ? { want: rel.stats.community.in_wantlist, have: rel.stats.community.in_collection } : undefined,
-        sources: [`on ${l.name} (${n(l.weight)} in your collection)`],
+        masterId: s.master_id || s.id, title, artist, year: s.year ? Number(s.year) : undefined,
+        thumb: s.thumb, styles: s.style, genres: s.genre, community: s.community, labelId: l.id,
+        sources: [`${style ? `${style} ` : ''}on ${l.name} (${n(l.weight)} in your collection)`],
       });
     }
   }
