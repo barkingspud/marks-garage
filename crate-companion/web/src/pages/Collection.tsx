@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { api } from '../api';
 import { Cover } from '../components/Cover';
-import { ErrorBox, Loading, PageHeader, artistLine, discogsUrl, formatLine } from '../components/ui';
+import { Empty, ErrorBox, Loading, PageHeader, artistLine, discogsUrl } from '../components/ui';
 
 type Sort = 'added' | 'artist' | 'title' | 'year' | 'rating';
 
@@ -39,7 +39,7 @@ export function Collection() {
 
   return (
     <>
-      <PageHeader title="Collection" sub={coll.data ? `${shown.length} of ${items.length} releases` : undefined}>
+      <PageHeader title="Collection" sub={coll.data ? (shown.length === items.length ? `${items.length} records` : `${shown.length} of ${items.length} records`) : undefined}>
         <select value={folder} onChange={(e) => setFolder(Number(e.target.value))} aria-label="Folder">
           {(folders.data?.folders ?? [{ id: 0, name: 'All', count: 0 }]).map((f) => (
             <option key={f.id} value={f.id}>{f.name}{f.count ? ` (${f.count})` : ''}</option>
@@ -62,21 +62,29 @@ export function Collection() {
       </div>
       {coll.isLoading && <Loading label="Loading collection (large collections take a moment)…" />}
       <ErrorBox error={coll.error} />
-      <ul className="list">
+      {coll.data && items.length === 0 && (
+        <Empty title="This folder is empty">Records you add to this folder on Discogs show up here.</Empty>
+      )}
+      {coll.data && items.length > 0 && shown.length === 0 && (
+        <Empty title="Nothing matches">Try a shorter search, or set the style back to All styles.</Empty>
+      )}
+      <ul className="bin">
         {shown.map((i) => {
           const b = i.basic_information;
+          const url = discogsUrl('release', b.id);
           return (
-            <li key={i.instance_id} className="row">
-              <Cover src={b.thumb} id={b.id} />
-              <div className="row-main">
-                <a href={discogsUrl('release', b.id)} target="_blank" rel="noreferrer" className="row-title">{b.title}</a>
-                <div>{artistLine(b)}</div>
-                <div className="muted small">
-                  {[b.labels[0] && `${b.labels[0].name} ${b.labels[0].catno ?? ''}`, b.year || null, formatLine(b)].filter(Boolean).join(' · ')}
+            <li key={i.instance_id} className="bin-item">
+              <a className="bin-cover" href={url} target="_blank" rel="noreferrer" tabIndex={-1} aria-hidden>
+                <Cover src={b.cover_image || b.thumb} id={b.id} fill />
+              </a>
+              <div className="bin-text">
+                <a href={url} target="_blank" rel="noreferrer" className="bin-title">{b.title}</a>
+                <div className="bin-artist">{artistLine(b)}</div>
+                <div className="bin-meta">
+                  {[b.year || null, b.labels[0] && `${b.labels[0].name} ${b.labels[0].catno ?? ''}`.trim()].filter(Boolean).join(', ')}
                 </div>
-                <div className="chips">{(b.styles ?? []).map((s) => <span key={s} className="chip">{s}</span>)}</div>
+                {i.rating > 0 && <div className="rating" aria-label={`Your rating: ${i.rating} out of 5`}>{'★'.repeat(i.rating)}</div>}
               </div>
-              {i.rating > 0 && <div className="rating" title={`Rated ${i.rating}/5`}>{'★'.repeat(i.rating)}</div>}
             </li>
           );
         })}

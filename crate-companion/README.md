@@ -1,6 +1,6 @@
 # Crate Companion
 
-A web app (Android to follow) for record collectors, built on the
+A web app (Android and iOS apps to follow) for record collectors, built on the
 [Discogs API](https://www.discogs.com/developers):
 
 - **Collection**: browse every folder, search by artist/title/label/cat#, and filter by style.
@@ -75,7 +75,7 @@ DISCOGS_ENV_FILE="/path/to/.env" npm run dev
 ## How it works
 
 ```
-web/      React + Vite UI (works as an installable PWA; wraps for Android with Capacitor later)
+web/      React + Vite UI (works as an installable PWA; wraps for Android and iOS with Capacitor later)
 server/   Hono API server: holds the token, rate-limits and caches calls to Discogs
 shared/   Pure logic used by both: condition grades, seller-match scoring, recommendation scoring
 ```
@@ -88,4 +88,4 @@ The browser never sees your token. Every Discogs call goes through `server/`, wh
 - runs long scans (seller inventories, recommendations) as background jobs that the UI polls for progress.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the roadmap, the Discogs API limits that shaped the
-design, and the Android plan.
+design, and the Android and iOS plan.

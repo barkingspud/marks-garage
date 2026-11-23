@@ -75,14 +75,18 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
 - [ ] Deploy the server (e.g. Fly.io, Render or Cloudflare Workers) behind HTTPS.
 - [ ] Scheduled "new match" checks with notifications.
 
-### Phase 4: Android
-- [ ] Wrap `web/` with **Capacitor**. The UI is already mobile-first, with a bottom tab bar
-      and safe-area insets.
-- [ ] Point the app at the hosted API from phase 3, and use a custom-scheme or app-link
+### Phase 4: Android and iOS apps
+- [ ] Wrap `web/` with **Capacitor**, which builds both the Android and the iOS app from the
+      same code. The UI is already built for it: bottom tab bar, safe-area insets (notch and
+      home bar), 48px touch targets, no hover-only controls, 16px inputs (no iOS zoom on focus),
+      light and dark themes that follow the system, and the font bundled with the app.
+- [ ] Point the apps at the hosted API from phase 3, and use a custom-scheme or app-link
       redirect for the OAuth callback.
+- [ ] Open Discogs links in the in-app browser (Capacitor Browser plugin) instead of leaving the app.
 - [ ] Barcode scanner to add records (Discogs search supports `barcode=`).
 - [ ] Offline read-only cache of the collection.
-- [ ] Play Store listing.
+- [ ] Store listings: Google Play (one-time developer fee) and the App Store (Apple Developer
+      Program, yearly fee; building the iOS app needs a Mac with Xcode, or a cloud Mac build service).
 
-Why Capacitor rather than React Native: it reuses this exact React UI, so the Android app is
-mostly packaging and native plugins (camera, push) rather than a rewrite.
+Why Capacitor rather than React Native: it reuses this exact React UI, so the apps are mostly
+packaging and native plugins (camera, push) rather than a rewrite.

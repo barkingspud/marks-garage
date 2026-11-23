@@ -3,7 +3,7 @@ import { GRADE_LABELS, MEDIA_GRADES, type Grade } from '../../../shared/conditio
 import { buyerPrice, DEFAULT_CRITERIA, type MatchCriteria } from '../../../shared/matching';
 import type { MatchResult } from '../../../shared/api-types';
 import { Cover } from '../components/Cover';
-import { ErrorBox, PageHeader, Progress, Score } from '../components/ui';
+import { ErrorBox, PageHeader, Progress, Score, Sticker } from '../components/ui';
 import { load, save } from '../storage';
 import { useJob } from '../useJob';
 
@@ -112,7 +112,7 @@ export function Match() {
           <ul className="list">
             {result.matches.map(({ listing: l, score, reasons }) => (
               <li key={l.id} className="row">
-                <Cover src={l.release.thumbnail} id={l.release.id} />
+                <Cover src={l.release.thumbnail} id={l.release.id} size={64} />
                 <div className="row-main">
                   <a href={l.uri} target="_blank" rel="noreferrer" className="row-title">{l.release.description}</a>
                   <div className="small">Media <b>{l.condition}</b> · Sleeve <b>{l.sleeve_condition}</b></div>
@@ -120,7 +120,7 @@ export function Match() {
                   <div className="chips">{reasons.map((r) => <span key={r} className="chip chip-good">{r}</span>)}</div>
                 </div>
                 <div className="row-side">
-                  <div className="price">{buyerPrice(l).value.toFixed(2)} <span className="muted small">{buyerPrice(l).currency}</span></div>
+                  <Sticker value={buyerPrice(l).value} currency={buyerPrice(l).currency} />
                   {buyerPrice(l).currency !== l.price.currency && <div className="muted small">{l.price.value.toFixed(2)} {l.price.currency}</div>}
                   <Score value={score} />
                 </div>
