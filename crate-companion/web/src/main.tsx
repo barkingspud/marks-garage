@@ -21,7 +21,7 @@ function App() {
   const status = useQuery({ queryKey: ['status'], queryFn: api.status });
   if (status.isLoading) return <Loading />;
   if (status.error) return <ErrorBox error={`Can't reach the API server — is "npm run dev" running? (${(status.error as Error).message})`} />;
-  if (!status.data!.configured) return <Setup />;
+  if (!status.data!.configured) return <Setup status={status.data!} />;
   return (
     <Routes>
       <Route element={<Layout status={status.data!} />}>

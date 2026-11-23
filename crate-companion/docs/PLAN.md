@@ -9,7 +9,7 @@
 | **Scraping discogs.com is against the Terms of Use** | We only use the API, so no scraping of marketplace pages to get around the limit above. |
 | **No recommendations API** | We build our own from collection metadata (see below). |
 | **A User-Agent is required, and attribution is required** | Set in `.env`. The UI footer shows "Data provided by Discogs". The app name avoids the Discogs trademark. |
-| **Auth:** personal token (one user) or OAuth 1.0a (any user) | v0.1 uses a personal token. OAuth is needed before other people (or the Play Store build) can sign in. |
+| **Auth:** personal token (one user) or OAuth 1.0a (any user) | "Connect with Discogs" uses OAuth 1.0a (PLAINTEXT signature over HTTPS); a personal token in `.env` still works as a fallback. One connected account per server for now. |
 
 ## Recommendation approach (v0.1)
 
@@ -68,7 +68,10 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
 - [ ] Collection stats page (by decade, style, format, value).
 
 ### Phase 3: Multi-user and hosting
-- [ ] Discogs OAuth 1.0a sign-in (request token → authorize → access token); per-user sessions.
+- [x] Discogs OAuth 1.0a sign-in ("Connect with Discogs": request token → authorize →
+      access token), saved to `.cache/` so it survives restarts, with Disconnect.
+- [ ] Per-user sessions: today one server holds one connected account. A hosted version needs
+      a session cookie per browser and per-user token storage (encrypted).
 - [ ] Deploy the server (e.g. Fly.io, Render or Cloudflare Workers) behind HTTPS.
 - [ ] Scheduled "new match" checks with notifications.
 

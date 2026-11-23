@@ -1,21 +1,23 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
+import type { DiscogsConnection } from './auth/connection';
 import type { DiscogsApi } from './discogs/api';
 import { DiscogsError } from './discogs/client';
 import { getJob, startJob } from './lib/jobs';
 import { buildRecommendations, fetchCollection, fetchWants, runSellerMatch } from './services';
 
-export function createApp(api: DiscogsApi, opts: { username?: string; hasToken: boolean }) {
+export function createApp(api: DiscogsApi, opts: { connection?: DiscogsConnection } = {}) {
   const app = new Hono().basePath('/api');
-  let username = opts.username;
+  const conn = opts.connection;
+  let mockUser: string | undefined;
 
   async function me(): Promise<string> {
-    if (!api.isMock && !opts.hasToken) {
-      throw new HTTPException(401, { message: 'No Discogs token configured. See README → Setup.' });
+    if (api.isMock) return (mockUser ??= (await api.identity()).username);
+    if (!conn?.connected) {
+      throw new HTTPException(401, { message: 'Not connected to Discogs. Use "Connect with Discogs" on the start page.' });
     }
-    username ??= (await api.identity()).username;
-    return username;
+    return conn.currentUsername(async () => (await api.identity()).username);
   }
 
   app.onError((err, c) => {
@@ -28,7 +30,46 @@ export function createApp(api: DiscogsApi, opts: { username?: string; hasToken: 
   app.get('/status', async (c) => {
     let user: string | null = null;
     try { user = await me(); } catch { /* not configured */ }
-    return c.json({ mock: api.isMock, configured: api.isMock || opts.hasToken, username: user, requestsInWindow: api.requestsInWindow() });
+    return c.json({
+      mock: api.isMock, configured: api.isMock || !!conn?.connected, username: user,
+      requestsInWindow: api.requestsInWindow(), auth: conn?.status() ?? null,
+    });
+  });
+
+  // ------------------------------------------------ Connect with Discogs (OAuth)
+  // These are page navigations, not fetches, so they answer with redirects.
+
+  app.get('/auth/connect', async (c) => {
+    if (!conn) return c.redirect('/');
+    try {
+      const callback = new URL('/api/auth/callback', c.req.url).toString();
+      return c.redirect(await conn.begin(callback));
+    } catch (e) {
+      console.error(e);
+      return c.redirect(`/?connect_error=${encodeURIComponent((e as Error).message)}`);
+    }
+  });
+
+  app.get('/auth/callback', async (c) => {
+    if (!conn) return c.redirect('/');
+    // Discogs sends ?denied=<token> when the user clicks "Cancel".
+    if (c.req.query('denied')) return c.redirect('/?connect_error=' + encodeURIComponent('Connection cancelled on Discogs.'));
+    const token = c.req.query('oauth_token');
+    const verifier = c.req.query('oauth_verifier');
+    if (!token || !verifier) return c.redirect('/?connect_error=' + encodeURIComponent('Discogs did not finish the sign-in.'));
+    try {
+      await conn.finish(token, verifier);
+      return c.redirect('/');
+    } catch (e) {
+      console.error(e);
+      return c.redirect(`/?connect_error=${encodeURIComponent((e as Error).message)}`);
+    }
+  });
+
+  app.post('/auth/disconnect', (c) => {
+    if (!conn) throw new HTTPException(400, { message: 'Nothing to disconnect in demo mode.' });
+    conn.disconnect();
+    return c.json(conn.status());
   });
 
   app.get('/me', async (c) => {

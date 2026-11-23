@@ -32,21 +32,34 @@ Open http://localhost:5173.
 
 ### Use your own Discogs account
 
-1. On Discogs, go to **Settings → Developers** (https://www.discogs.com/settings/developers)
-   and click **Generate new token**.
-2. Make a `.env` file from `.env.example` and fill in `DISCOGS_TOKEN` (and `DISCOGS_USERNAME`
-   if you like). **Never commit it.** `.env` is git-ignored, but it is safer to keep it outside
-   the repo entirely and point the app at it:
+The app connects with a **Connect with Discogs** button: you sign in on discogs.com and approve
+access, and the app never sees your password. For that, the app has to be registered with
+Discogs once:
 
-   PowerShell:
-   ```powershell
-   $env:DISCOGS_ENV_FILE = "C:\path\to\Discogs App\.env"; npm run dev
-   ```
-   bash:
-   ```bash
-   DISCOGS_ENV_FILE="/path/to/.env" npm run dev
-   ```
-3. Open http://localhost:5173.
+1. On Discogs, go to **Settings → Developers** (https://www.discogs.com/settings/developers)
+   and click **Create an Application**. Any name and description will do.
+2. Make a `.env` file from `.env.example` and fill in `DISCOGS_CONSUMER_KEY` and
+   `DISCOGS_CONSUMER_SECRET` from that application. **Never commit it** (`.env` is git-ignored).
+3. Run `npm run dev`, open http://localhost:5173 and click **Connect with Discogs**.
+
+The connection is saved in `.cache/discogs-connection.json` (git-ignored), so you stay
+connected after a restart. **Disconnect** is on the Home page and in the sidebar. To remove
+the app's access on the Discogs side as well, revoke it in your Discogs settings.
+
+**Personal token instead:** put a token from the same Developers page (**Generate new token**)
+in `.env` as `DISCOGS_TOKEN`. A connected account takes priority over the token, and the token
+is used again after you disconnect.
+
+To keep `.env` outside the repo, point the app at it:
+
+PowerShell:
+```powershell
+$env:DISCOGS_ENV_FILE = "C:\path\to\Discogs App\.env"; npm run dev
+```
+bash:
+```bash
+DISCOGS_ENV_FILE="/path/to/.env" npm run dev
+```
 
 ## Scripts
 

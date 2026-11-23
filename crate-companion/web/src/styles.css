@@ -115,6 +115,14 @@ button.primary { background: var(--accent); color: var(--accent-text); border-co
 button.ghost { background: transparent; }
 button.small { padding: 4px 10px; font-size: .85rem; }
 button.danger { color: var(--danger); }
+a.button {
+  display: inline-block; border-radius: 8px; padding: 8px 14px; font-weight: 500;
+  text-decoration: none; border: 1px solid var(--border); background: var(--surface-2); color: inherit;
+}
+a.button.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+a.button.big { padding: 12px 22px; font-size: 1.05rem; margin: 6px 0 10px; }
+.setup-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 8px; }
+.account-line { margin-top: 20px; }
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .toolbar input[type=search] { flex: 1 1 240px; }
 .inline { display: flex; gap: 8px; margin-bottom: 12px; }

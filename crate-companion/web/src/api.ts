@@ -14,7 +14,20 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export interface Status { mock: boolean; configured: boolean; username: string | null; requestsInWindow: number }
+export interface AuthStatus {
+  /** 'oauth' = connected with the button; 'token' = personal token from .env. */
+  method: 'oauth' | 'token' | null;
+  username: string | null;
+  /** The app is registered with Discogs, so "Connect with Discogs" can work. */
+  canConnect: boolean;
+}
+export interface Status {
+  mock: boolean; configured: boolean; username: string | null; requestsInWindow: number;
+  auth: AuthStatus | null;
+}
+
+/** Full-page navigation: the server sends the browser on to discogs.com to approve. */
+export const CONNECT_URL = '/api/auth/connect';
 export interface Job<T> {
   id: string; status: 'running' | 'done' | 'error';
   progress: { done: number; total: number; message: string };
@@ -34,4 +47,5 @@ export const api = {
   startJob: (kind: 'match' | 'recommend', body: unknown = {}) =>
     call<{ id: string }>(`/jobs/${kind}`, { method: 'POST', body: JSON.stringify(body) }),
   job: <T,>(id: string) => call<Job<T>>(`/jobs/${id}`),
+  disconnect: () => call<AuthStatus>('/auth/disconnect', { method: 'POST' }),
 };
