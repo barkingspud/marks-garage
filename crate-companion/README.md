@@ -3,13 +3,24 @@
 A web app (Android and iOS apps to follow) for record collectors, built on the
 [Discogs API](https://www.discogs.com/developers):
 
-- **Collection**: browse every folder, search by artist/title/label/cat#, and filter by style.
+- **Home**: your latest record, cover in front and the record sliding out and turning.
+- **Collection**: browse every folder as a cover grid or list, search by artist/title/label/cat#,
+  and filter by style. On wide screens the selected record opens in a side panel.
+- **Record detail**: your grades (from your Discogs collection fields) on the scale from Poor
+  to Mint, catalogue details, or, for wanted records, the current lowest price.
+- **Record Check**: in a shop, find the exact pressing by text, catalogue number or barcode
+  (camera scanning where the browser supports it), see whether you own or want it, compare the
+  asking price with Discogs listings, and add it to your collection when you buy it.
 - **Wantlist**: view it, remove items, and check how many copies are for sale and the lowest price.
 - **Seller match**: scan the shops of the sellers you choose for wantlist items that meet your
   rules (minimum media and sleeve grade, seller rating, number of ratings, max price, ships-from),
   ranked by a 0–100 score.
 - **Discover**: recommendations built from the artists, labels, styles and decades you collect,
   each with the reason it was picked. One click adds a pick to your wantlist.
+
+The look ("Listening Room"): each screen is a dim room tinted by the colours of the record in
+focus, with frosted-glass controls and artwork in lifted cards. Glass sidebar on desktop,
+floating tab bar on phones.
 
 > Data provided by Discogs. This project is not affiliated with or endorsed by Discogs.
 

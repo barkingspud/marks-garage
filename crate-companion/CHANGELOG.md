@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+**New look and two new screens.**
+
+- "Listening Room" design across the app: a dim room tinted from the record in focus (colour
+  read from the real cover), frosted-glass controls, artwork in lifted square cards, grain,
+  amber only for prices, scores and the main action. Bricolage Grotesque, bundled.
+- Glass sidebar on desktop; floating tab bar on phones.
+- Home: the latest record's cover in front with its record sliding out and turning.
+- Collection: cover grid or list, style chips, and a side panel for the selected record on wide screens.
+- Record detail (new): your record and sleeve grades from your collection fields, catalogue
+  details, styles; for wanted records, the current lowest price and listing count.
+- Record Check (new): search by text, catalogue number or barcode (camera scanning where
+  supported), pick the exact pressing, see owned/wanted status, compare a shop's price with the
+  cheapest Discogs listing, and "I bought it" to add it to your collection.
+- Wantlist: cover grid with frosted price tags and per-record Check price.
+- Sellers: setup, a turning-record progress ring while scanning, and ranked results with grade
+  chips, big scores, seller trust and price with shipping where available.
+- Discover: top pick with a score ring and reasons, then more picks with one-tap add.
+- Server: cover image pass-through (Discogs images only) so the app can read colours; collection
+  custom fields; release search; add to collection.
+
 Field mappings checked against the live Discogs API.
 
 - Seller match compares prices in your own currency (`original_price.converted`) for the

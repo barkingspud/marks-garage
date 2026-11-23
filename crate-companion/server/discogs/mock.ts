@@ -60,12 +60,14 @@ const catalog: (BasicInformation & { community: { want: number; have: number } }
 
 const USERNAME = 'demo_digger';
 // Collection skews to the first 12 artists; the rest of the catalog is "undiscovered".
-const collection: CollectionItem[] = catalog
+let collection: CollectionItem[] = catalog
   .filter((b) => (b.artists[0]!.id - 1001) < 12 && b.id % 3 !== 0)
   .slice(0, 64)
   .map((b, i) => ({
     id: b.id, instance_id: 70000 + i, folder_id: i % 4 === 0 ? 2 : 1, rating: i % 5 === 0 ? 5 : i % 7 === 0 ? 3 : 0,
     date_added: new Date(Date.UTC(2024, 0, 1) + i * 86_400_000 * 5).toISOString(), basic_information: b,
+    // Like a real collection with the default custom fields filled in on some records.
+    notes: i % 3 === 0 ? [{ field_id: 1, value: 'Near Mint (NM or M-)' }, { field_id: 2, value: 'Very Good Plus (VG+)' }] : undefined,
   }));
 const owned = new Set(collection.map((c) => c.id));
 let wants: WantItem[] = catalog
@@ -154,6 +156,19 @@ export class MockDiscogs implements DiscogsApi {
     }
   }
   async removeWant(_u: string, releaseId: number) { wants = wants.filter((w) => w.id !== releaseId); }
+  async addToCollection(_u: string, releaseId: number) {
+    const b = catalog.find((c) => c.id === releaseId);
+    if (b && !collection.some((c) => c.id === releaseId)) {
+      collection = [{ id: b.id, instance_id: 80000 + collection.length, folder_id: 1, rating: 0, date_added: new Date().toISOString(), basic_information: b }, ...collection];
+    }
+  }
+  async collectionFields() {
+    return { fields: [
+      { id: 1, name: 'Media Condition', type: 'dropdown', position: 1 },
+      { id: 2, name: 'Sleeve Condition', type: 'dropdown', position: 2 },
+      { id: 3, name: 'Notes', type: 'textarea', position: 3 },
+    ] };
+  }
   async marketplaceStats(releaseId: number) {
     const listed = [...inventories.values()].flat().filter((l) => l.release.id === releaseId);
     const lowest = listed.length ? Math.min(...listed.map((l) => l.price.value)) : null;
@@ -193,11 +208,14 @@ export class MockDiscogs implements DiscogsApi {
       .filter((b) => (!params.style || b.styles?.includes(params.style)) && (!params.genre || b.genres?.includes(params.genre)))
       .filter((b) => !params.label || b.labels.some((l) => l.name === params.label))
       .filter((b) => !params.artist || b.artists[0]!.name === params.artist)
+      .filter((b) => !params.q || `${b.artists[0]!.name} ${b.title}`.toLowerCase().includes(params.q.toLowerCase()))
+      .filter((b) => !params.catno || b.labels.some((l) => (l.catno ?? '').toLowerCase() === params.catno!.toLowerCase()))
       .filter((b) => !from || (b.year >= from && b.year <= (to || from)))
       .map((b) => ({
-        id: b.master_id, type: 'master', master_id: b.master_id, title: `${b.artists[0]!.name} - ${b.title}`,
+        id: params.type === 'release' ? b.id : b.master_id, type: params.type === 'release' ? 'release' : 'master',
+        master_id: b.master_id, title: `${b.artists[0]!.name} - ${b.title}`,
         year: String(b.year), genre: b.genres, style: b.styles, label: [b.labels[0]!.name], format: ['Vinyl', 'LP', 'Album'],
-        thumb: '', community: b.community,
+        catno: b.labels[0]!.catno, country: 'US', thumb: '', community: b.community,
       }));
     if (params.sort === 'have') items.sort((a, b) => (b.community?.have ?? 0) - (a.community?.have ?? 0));
     const { pagination, items: results } = page(items, params.page ?? 1, params.per_page ?? 50);

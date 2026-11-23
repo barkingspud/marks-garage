@@ -81,6 +81,7 @@ export interface Listing {
   condition: string;        // e.g. "Very Good Plus (VG+)"
   sleeve_condition: string; // may also be "Generic", "Not Graded", "No Cover"
   price: Price;             // in the seller's currency
+  shipping_price?: Price;   // to the buyer, in the seller's currency
   original_price?: OriginalPrice;
   ships_from?: string;
   comments?: string;
@@ -131,6 +132,9 @@ export interface LabelRelease {
   stats?: { community?: { in_wantlist: number; in_collection: number } };
 }
 
+/** A collection custom field, e.g. "Media Condition". */
+export interface CollectionField { id: number; name: string; type: string; position?: number }
+
 /** Item from /database/search */
 export interface SearchResult {
   id: number;
@@ -143,6 +147,8 @@ export interface SearchResult {
   label?: string[];
   format?: string[];
   country?: string;
+  catno?: string;
+  barcode?: string[];
   thumb?: string;
   cover_image?: string;
   community?: { want: number; have: number };
