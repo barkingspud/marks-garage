@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import type { Status } from '../api';
+import { DisconnectButton } from './Disconnect';
 
 const NAV = [
   { to: '/', label: 'Home', icon: '◉' },
@@ -21,7 +22,12 @@ export function Layout({ status }: { status: Status }) {
           </NavLink>
         ))}
         <div className="nav-foot muted">
-          {status.mock ? <span className="pill">Demo data</span> : status.username && <>Signed in as <b>{status.username}</b></>}
+          {status.mock ? <span className="pill">Demo data</span> : status.username && (
+            <>
+              Signed in as <b>{status.username}</b>
+              {status.auth?.method === 'oauth' && <div><DisconnectButton /></div>}
+            </>
+          )}
         </div>
       </nav>
       <main className="main">

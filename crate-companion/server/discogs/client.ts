@@ -1,3 +1,4 @@
+import { oauthHeader, type Consumer, type TokenPair } from '../auth/oauth';
 import { TtlCache } from '../lib/cache';
 import { RateLimiter } from '../lib/rate-limiter';
 import type { DiscogsApi, SearchParams } from './api';
@@ -12,13 +13,39 @@ export class DiscogsError extends Error {
   }
 }
 
-/** Real Discogs client: personal-token auth, rate limiting, GET caching, 429 retry. */
+/** How requests are signed: a personal token, or an account connected with OAuth. */
+export type DiscogsAuth =
+  | { kind: 'token'; token: string }
+  | { kind: 'oauth'; consumer: Consumer; access: TokenPair };
+
+export function authorizationHeader(auth: DiscogsAuth): string {
+  return auth.kind === 'token' ? `Discogs token=${auth.token}` : oauthHeader(auth.consumer, auth.access);
+}
+
+/** Real Discogs client: token or OAuth auth, rate limiting, GET caching, 429 retry. */
 export class DiscogsClient implements DiscogsApi {
   readonly isMock = false;
   private limiter = new RateLimiter();
   private cache = new TtlCache<unknown>();
 
-  constructor(private opts: { token?: string; userAgent: string }) {}
+  constructor(private opts: { userAgent: string; auth?: DiscogsAuth }) {}
+
+  /** Switch accounts. Cached responses belong to the previous account, so drop them. */
+  setAuth(auth: DiscogsAuth | undefined) {
+    this.opts.auth = auth;
+    this.cache.clear();
+  }
+
+  /** Who these credentials belong to (doesn't change the client's own credentials). */
+  async identify(auth: DiscogsAuth): Promise<string> {
+    await this.limiter.acquire();
+    const res = await fetch(`${BASE}/oauth/identity`, {
+      headers: { 'User-Agent': this.opts.userAgent, Authorization: authorizationHeader(auth) },
+    });
+    this.limiter.update(res.headers.get('X-Discogs-Ratelimit-Remaining'));
+    if (!res.ok) throw new DiscogsError(res.status, `Discogs ${res.status} on GET /oauth/identity`);
+    return ((await res.json()) as { username: string }).username;
+  }
 
   requestsInWindow() {
     return this.limiter.used;
@@ -43,10 +70,11 @@ export class DiscogsClient implements DiscogsApi {
       'User-Agent': this.opts.userAgent,
       Accept: 'application/vnd.discogs.v2.discogs+json',
     };
-    if (this.opts.token) headers.Authorization = `Discogs token=${this.opts.token}`;
 
     for (let attempt = 0; ; attempt++) {
       await this.limiter.acquire();
+      // Re-sign each attempt: OAuth headers carry a one-time nonce and timestamp.
+      if (this.opts.auth) headers.Authorization = authorizationHeader(this.opts.auth);
       const res = await fetch(key, { method, headers });
       this.limiter.update(res.headers.get('X-Discogs-Ratelimit-Remaining'));
 

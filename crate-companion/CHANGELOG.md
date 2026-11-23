@@ -19,6 +19,10 @@ Field mappings checked against the live Discogs API.
   of the start of their discography (which included singles).
 - `npm run dev` and `npm run mock` no longer start the API server in watch mode, which hung
   with no error in a OneDrive-synced folder on Windows. Use `npm run dev:watch` for that.
+- **Connect with Discogs**: sign in on discogs.com and approve access (OAuth 1.0a) instead of
+  pasting a token into `.env`. Needs the app registered once with Discogs
+  (`DISCOGS_CONSUMER_KEY`/`SECRET`). The connection survives restarts, and Disconnect is on the
+  Home page and in the sidebar. A personal `DISCOGS_TOKEN` still works as a fallback.
 - Types updated: `curr_abbr` on profiles, collection custom-field `notes`, listing `original_price`.
 
 ## 0.1.0 (2026-11-23)

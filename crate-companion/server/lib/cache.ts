@@ -21,6 +21,10 @@ export class TtlCache<V> {
     this.store.set(key, { value, expires: Date.now() + ttlMs });
   }
 
+  clear() {
+    this.store.clear();
+  }
+
   deletePrefix(prefix: string) {
     for (const k of this.store.keys()) if (k.startsWith(prefix)) this.store.delete(k);
   }

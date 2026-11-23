@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
+import { api, type Status } from '../api';
+import { DisconnectButton } from '../components/Disconnect';
 import { ErrorBox, Loading, PageHeader } from '../components/ui';
 
 export function Home() {
   const me = useQuery({ queryKey: ['me'], queryFn: api.me });
+  const status = useQuery<Status>({ queryKey: ['status'], queryFn: api.status });
   if (me.isLoading) return <Loading />;
   if (me.error) return <ErrorBox error={me.error} />;
   const { profile, value } = me.data!;
@@ -27,6 +29,11 @@ export function Home() {
           <p className="muted">Recommendations built from the artists, labels and styles you already collect.</p>
         </Link>
       </section>
+      {status.data?.auth?.method === 'oauth' && (
+        <p className="muted small account-line">
+          Connected to Discogs as <b>{status.data.auth.username}</b>. <DisconnectButton />
+        </p>
+      )}
     </>
   );
 }
