@@ -17,6 +17,8 @@ Field mappings checked against the live Discogs API.
   artist, and the "*" Discogs adds to name variations is dropped.
 - Recommendations from your top artists are now their albums, most collected first, instead
   of the start of their discography (which included singles).
+- `npm run dev` and `npm run mock` no longer start the API server in watch mode, which hung
+  with no error in a OneDrive-synced folder on Windows. Use `npm run dev:watch` for that.
 - Types updated: `curr_abbr` on profiles, collection custom-field `notes`, listing `original_price`.
 
 ## 0.1.0 (2026-11-23)

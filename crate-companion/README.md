@@ -52,8 +52,9 @@ Open http://localhost:5173.
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | API server (port 8787) and web app (port 5173) with hot reload |
+| `npm run dev` | API server (port 8787) and web app (port 5173); the web app hot-reloads |
 | `npm run mock` | Same, using built-in demo data instead of Discogs |
+| `npm run dev:watch` | Like `dev`, but the API server also restarts when its code changes. Can hang in a OneDrive-synced folder. |
 | `npm test` | Unit tests for grading, matching, recommendations and services |
 | `npm run typecheck` | TypeScript check |
 | `npm run build` then `npm start` | Production build served by the API server on port 8787 |
