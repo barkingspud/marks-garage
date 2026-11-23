@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "tsBuildInfoFile": "node_modules/.tmp/server.tsbuildinfo"
+  },
+  "include": ["server", "shared", "vite.config.ts"]
+}
