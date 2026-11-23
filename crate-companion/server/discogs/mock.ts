@@ -91,7 +91,14 @@ const inventories = new Map<string, Listing[]>(
       const price = Math.round(basePrice.get(b.id)! * (1.6 - ci * 0.15 + r() * 0.6) * 100) / 100;
       return {
         id: s.id * 100000 + i, status: 'For Sale', condition: GRADES[ci]!, sleeve_condition: pick(SLEEVES),
-        price: { value: price, currency: 'USD' }, ships_from: s.ships, allow_offers: r() > 0.5,
+        // Like the real API: `price` is in the seller's currency, `original_price.converted` in the buyer's.
+        ...(s.ships === 'Germany'
+          ? {
+              price: { value: Math.round(price * 92) / 100, currency: 'EUR' },
+              original_price: { curr_abbr: 'EUR', value: Math.round(price * 92) / 100, converted: { curr_abbr: 'USD', value: price } },
+            }
+          : { price: { value: price, currency: 'USD' } }),
+        ships_from: s.ships, allow_offers: r() > 0.5,
         uri: `https://www.discogs.com/sell/item/${s.id * 100000 + i}`,
         seller: { id: s.id, username: s.username, stats: { rating: String(s.rating), total: s.total } },
         release: { id: b.id, description: `${b.artists[0]!.name} - ${b.title} (LP, Album)`, year: b.year },
@@ -118,7 +125,7 @@ export class MockDiscogs implements DiscogsApi {
     return {
       id: 1, username, name: username === USERNAME ? 'Demo Digger' : username,
       num_collection: collection.length, num_wantlist: wants.length,
-      seller_rating: s?.rating, seller_num_ratings: s?.total, currency: 'USD',
+      seller_rating: s?.rating, seller_num_ratings: s?.total, curr_abbr: 'USD',
     };
   }
   async folders() {
@@ -170,6 +177,7 @@ export class MockDiscogs implements DiscogsApi {
   async labelReleases(labelId: number, p = 1, perPage = 100) {
     const items: LabelRelease[] = catalog.filter((b) => b.labels[0]!.id === labelId).map((b) => ({
       id: b.id, title: b.title, artist: b.artists[0]!.name, year: b.year, catno: b.labels[0]!.catno, format: 'LP', thumb: '',
+      stats: { community: { in_wantlist: b.community.want, in_collection: b.community.have } },
     }));
     const { pagination, items: releases } = page(items, p, perPage);
     return { pagination, releases };

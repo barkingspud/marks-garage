@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CRITERIA } from '../shared/matching';
 import { MockDiscogs } from './discogs/mock';
-import { buildRecommendations, runSellerMatch } from './services';
+import { buildRecommendations, runSellerMatch, splitTitle } from './services';
 
 const noop = () => {};
 
@@ -20,5 +20,13 @@ describe('services against mock Discogs', () => {
     const r = await buildRecommendations(api, 'demo_digger', { artists: 4, labels: 2, styles: 3 }, noop);
     expect(r.recommendations.length).toBeGreaterThan(5);
     expect(r.profile.topArtists.length).toBe(4);
+  });
+});
+
+describe('splitTitle', () => {
+  it('splits search titles and cleans Discogs artist suffixes and stray spaces', () => {
+    expect(splitTitle('Steve Perry - Traces ')).toEqual({ artist: 'Steve Perry', title: 'Traces' });
+    expect(splitTitle('UFO (5) - Doctor Doctor')).toEqual({ artist: 'UFO', title: 'Doctor Doctor' });
+    expect(splitTitle('Untitled')).toEqual({ artist: '', title: 'Untitled' });
   });
 });

@@ -36,8 +36,20 @@ Claude-written "why you'd like this" note.
 Collection, wantlist, seller match, recommendations, demo mode, tests.
 
 ### Phase 2: Make it solid
-- [ ] Verify against the live API with a real account, and adjust field mappings
-      (seller stats on inventory listings, search `community` field, and so on).
+- [x] Verify against the live API with a real account, and adjust field mappings.
+      Checked 2026-11-23 (374-item collection, 63 wants, `recordsale-de` inventory).
+      Confirmed: inventory listings carry `seller.stats` (rating is a string, e.g. `"99.8"`);
+      search results carry `community.want/have`; artist releases carry `stats.community`.
+      Fixed: listing `release.thumbnail` (not `thumb`); listing `price` is in the *seller's*
+      currency, so max price and the market-floor comparison now use
+      `original_price.converted` (the buyer's currency, same as `/marketplace/stats`);
+      profile currency is `curr_abbr`; releases that list a label once per catalog number
+      no longer double-count it; search titles lose trailing spaces and ` (2)` suffixes;
+      label-release candidates now use their `stats.community`.
+- [ ] Recommendation quality: label catalogs (page 1 of `/labels/{id}/releases`) are
+      mostly unrelated or "Various" compilations for big labels like Warner Bros. (160k
+      releases) and never reach the top 60. Filter by artist "Various", or replace with a
+      `/database/search?label=…&style=…` query. Artist discographies include singles.
 - [ ] Persistent cache (SQLite) so restarts don't re-fetch everything, plus incremental
       collection sync.
 - [ ] Wantlist notes and a per-item "max price"/"min grade" that overrides the global criteria.

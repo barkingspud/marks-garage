@@ -16,6 +16,10 @@ export interface TasteProfile {
 const IGNORED_ARTISTS = new Set([194 /* Various */, 355 /* Unknown Artist */]);
 const IGNORED_LABELS = new Set([750 /* Not On Label */, 1818 /* White Label */]);
 
+function uniqueById<T extends { id: number }>(xs: T[]): T[] {
+  return [...new Map(xs.map((x) => [x.id, x])).values()];
+}
+
 function bump<K>(m: Map<K, number>, k: K, w: number) {
   m.set(k, (m.get(k) ?? 0) + w);
 }
@@ -36,12 +40,14 @@ export function buildTasteProfile(collection: CollectionItem[]): TasteProfile {
     const w = itemWeight(item.rating);
     p.ownedReleaseIds.add(b.id);
     if (b.master_id) p.ownedMasterIds.add(b.master_id);
-    for (const a of b.artists) {
+    // A release often lists the same label more than once (one entry per catalog number),
+    // so count each artist and label once per item.
+    for (const a of uniqueById(b.artists)) {
       if (IGNORED_ARTISTS.has(a.id)) continue;
       const cur = p.artists.get(a.id);
       p.artists.set(a.id, { name: a.name, weight: (cur?.weight ?? 0) + w });
     }
-    for (const l of b.labels) {
+    for (const l of uniqueById(b.labels)) {
       if (IGNORED_LABELS.has(l.id)) continue;
       const cur = p.labels.get(l.id);
       p.labels.set(l.id, { name: l.name, weight: (cur?.weight ?? 0) + w });

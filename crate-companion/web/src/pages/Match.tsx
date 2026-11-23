@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { GRADE_LABELS, MEDIA_GRADES, type Grade } from '../../../shared/conditions';
-import { DEFAULT_CRITERIA, type MatchCriteria } from '../../../shared/matching';
+import { buyerPrice, DEFAULT_CRITERIA, type MatchCriteria } from '../../../shared/matching';
 import type { MatchResult } from '../../../shared/api-types';
 import { Cover } from '../components/Cover';
 import { ErrorBox, PageHeader, Progress, Score } from '../components/ui';
@@ -67,7 +67,7 @@ export function Match() {
             <label className="field">Min # of ratings
               <input type="number" min={0} value={cfg.criteria.minSellerRatings} onChange={(e) => setCrit({ minSellerRatings: Number(e.target.value) })} />
             </label>
-            <label className="field">Max price
+            <label className="field">Max price (your currency)
               <input type="number" min={0} placeholder="no limit" value={cfg.criteria.maxPrice ?? ''} onChange={(e) => setCrit({ maxPrice: e.target.value ? Number(e.target.value) : null })} />
             </label>
             <label className="field">Ships from <span className="muted small">(comma-separated)</span>
@@ -110,7 +110,7 @@ export function Match() {
           <ul className="list">
             {result.matches.map(({ listing: l, score, reasons }) => (
               <li key={l.id} className="row">
-                <Cover src={l.release.thumb} id={l.release.id} />
+                <Cover src={l.release.thumbnail} id={l.release.id} />
                 <div className="row-main">
                   <a href={l.uri} target="_blank" rel="noreferrer" className="row-title">{l.release.description}</a>
                   <div className="small">Media <b>{l.condition}</b> · Sleeve <b>{l.sleeve_condition}</b></div>
@@ -118,7 +118,8 @@ export function Match() {
                   <div className="chips">{reasons.map((r) => <span key={r} className="chip chip-good">{r}</span>)}</div>
                 </div>
                 <div className="row-side">
-                  <div className="price">{l.price.value.toFixed(2)} <span className="muted small">{l.price.currency}</span></div>
+                  <div className="price">{buyerPrice(l).value.toFixed(2)} <span className="muted small">{buyerPrice(l).currency}</span></div>
+                  {buyerPrice(l).currency !== l.price.currency && <div className="muted small">{l.price.value.toFixed(2)} {l.price.currency}</div>}
                   <Score value={score} />
                 </div>
               </li>

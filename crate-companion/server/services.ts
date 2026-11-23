@@ -75,7 +75,7 @@ export async function runSellerMatch(
       step += req.maxPagesPerSeller;
       // Inventory listings don't always carry seller stats; fill from the profile.
       for (const l of items) {
-        if (!l.seller.stats && prof?.seller_rating !== undefined) {
+        if (!l.seller.stats && prof?.seller_rating !== undefined && (prof.seller_num_ratings ?? 0) > 0) {
           l.seller.stats = { rating: prof.seller_rating, total: prof.seller_num_ratings ?? 0 };
         }
       }
@@ -109,9 +109,14 @@ export async function runSellerMatch(
 
 export interface RecommendOptions { artists: number; labels: number; styles: number }
 
-function splitTitle(t: string): { artist: string; title: string } {
+/**
+ * Search results title masters "Artist - Title". Discogs adds " (2)" etc. to tell apart
+ * artists with the same name, and titles sometimes have trailing spaces.
+ */
+export function splitTitle(t: string): { artist: string; title: string } {
   const i = t.indexOf(' - ');
-  return i > 0 ? { artist: t.slice(0, i), title: t.slice(i + 3) } : { artist: '', title: t };
+  if (i <= 0) return { artist: '', title: t.trim() };
+  return { artist: t.slice(0, i).replace(/\s+\(\d+\)$/, '').trim(), title: t.slice(i + 3).trim() };
 }
 
 export async function buildRecommendations(
@@ -151,6 +156,8 @@ export async function buildRecommendations(
     for (const rel of r?.releases ?? []) {
       candidates.push({
         releaseId: rel.id, title: rel.title, artist: rel.artist, year: rel.year, thumb: rel.thumb, labelId: l.id,
+        community: rel.stats?.community
+          ? { want: rel.stats.community.in_wantlist, have: rel.stats.community.in_collection } : undefined,
         sources: [`on ${l.name} (${n(l.weight)} in your collection)`],
       });
     }

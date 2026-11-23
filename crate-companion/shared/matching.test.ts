@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Listing } from './discogs-types';
-import { DEFAULT_CRITERIA, matchListings, rejectReasons, scoreListing } from './matching';
+import { buyerPrice, DEFAULT_CRITERIA, matchListings, rejectReasons, scoreListing } from './matching';
 
 const listing = (over: Partial<Listing> & { rating?: number; total?: number } = {}): Listing => ({
   id: 1, status: 'For Sale', condition: 'Near Mint (NM or M-)', sleeve_condition: 'Very Good Plus (VG+)',
@@ -45,5 +45,22 @@ describe('matchListings', () => {
       new Set([100]), DEFAULT_CRITERIA,
     );
     expect(out.map((m) => m.listing.id)).toEqual([3, 1]);
+  });
+});
+
+describe('buyerPrice (seller currency vs. buyer currency)', () => {
+  // Shape seen on the live API: a German shop pricing in EUR, viewed by a USD account.
+  const eur = listing({
+    price: { value: 12.08, currency: 'EUR' },
+    original_price: { curr_abbr: 'EUR', value: 12.08, converted: { curr_abbr: 'USD', value: 13.27 } },
+  });
+  it('uses the converted price when present', () => {
+    expect(buyerPrice(eur)).toEqual({ value: 13.27, currency: 'USD' });
+    expect(buyerPrice(listing())).toEqual({ value: 20, currency: 'USD' });
+  });
+  it('applies max price and the market floor in the buyer currency', () => {
+    expect(rejectReasons(eur, { ...DEFAULT_CRITERIA, maxPrice: 13 })).toHaveLength(1);
+    expect(rejectReasons(eur, { ...DEFAULT_CRITERIA, maxPrice: 14 })).toEqual([]);
+    expect(scoreListing(eur, 13.27).reasons).toContain('near lowest price');
   });
 });

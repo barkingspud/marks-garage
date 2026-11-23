@@ -24,6 +24,11 @@ describe('buildTasteProfile', () => {
     expect(p.styles.get('Techno')).toBe(4);
     expect(p.ownedMasterIds.has(1001)).toBe(true);
   });
+  it('counts a label once per release even when listed with several catalog numbers', () => {
+    const dup = item(9, 30, ['Rock']);
+    dup.basic_information.labels = [{ id: 1000, name: 'WB', catno: '1-25264' }, { id: 1000, name: 'WB', catno: '9 25264-1' }];
+    expect(buildTasteProfile([dup]).labels.get(1000)!.weight).toBe(1);
+  });
 });
 
 describe('rankCandidates', () => {

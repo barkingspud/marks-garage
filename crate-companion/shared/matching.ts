@@ -1,5 +1,5 @@
 import { gradeRank, meetsGrade, parseGrade, type Grade } from './conditions';
-import type { Listing } from './discogs-types';
+import type { Listing, Price } from './discogs-types';
 
 export interface MatchCriteria {
   minMedia: Grade;
@@ -10,7 +10,7 @@ export interface MatchCriteria {
   /** Seller feedback %, 0-100. */
   minSellerRating: number;
   minSellerRatings: number;
-  /** Max price in the listing currency; null = no limit. */
+  /** Max price in your marketplace currency (see `buyerPrice`); null = no limit. */
   maxPrice: number | null;
   /** If non-empty, listing.ships_from must be one of these. */
   shipsFrom: string[];
@@ -39,6 +39,16 @@ export function sellerRating(l: Listing): { rating: number | null; total: number
   return { rating: Number.isFinite(r) ? r : null, total: s.total ?? 0 };
 }
 
+/**
+ * Listing price in the buyer's currency. `price` is in the seller's currency (e.g. EUR),
+ * while marketplace stats and the user's max price are in the user's own currency, which
+ * Discogs supplies as `original_price.converted`.
+ */
+export function buyerPrice(l: Listing): Price {
+  const c = l.original_price?.converted;
+  return c ? { value: c.value, currency: c.curr_abbr } : l.price;
+}
+
 /** Returns a list of reasons the listing fails the criteria (empty = passes). */
 export function rejectReasons(l: Listing, c: MatchCriteria): string[] {
   const out: string[] = [];
@@ -54,7 +64,8 @@ export function rejectReasons(l: Listing, c: MatchCriteria): string[] {
   const { rating, total } = sellerRating(l);
   if (rating !== null && rating < c.minSellerRating) out.push(`seller rating ${rating}% < ${c.minSellerRating}%`);
   if (total < c.minSellerRatings) out.push(`seller has ${total} ratings (< ${c.minSellerRatings})`);
-  if (c.maxPrice !== null && l.price.value > c.maxPrice) out.push(`price ${l.price.value} > ${c.maxPrice}`);
+  const price = buyerPrice(l).value;
+  if (c.maxPrice !== null && price > c.maxPrice) out.push(`price ${price} > ${c.maxPrice}`);
   if (c.shipsFrom.length && !c.shipsFrom.includes(l.ships_from ?? '')) out.push(`ships from ${l.ships_from}`);
   return out;
 }
@@ -74,7 +85,7 @@ export function scoreListing(l: Listing, lowestPrice: number | null): ScoredList
   const seller = 0.7 * ratingPart + 0.3 * volumePart;
   let price = 0.5;
   if (lowestPrice && lowestPrice > 0) {
-    const ratio = l.price.value / lowestPrice;                      // 1 = market floor
+    const ratio = buyerPrice(l).value / lowestPrice;                      // 1 = market floor
     price = Math.max(0, Math.min(1, 1 - (ratio - 1) / 2));          // 3x floor → 0
     if (ratio <= 1.1) reasons.push('near lowest price');
   }

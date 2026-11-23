@@ -33,6 +33,8 @@ export interface CollectionItem {
   folder_id: number;
   rating: number;        // 0-5, 0 = unrated
   date_added: string;
+  /** Values of the user's collection custom fields (e.g. media/sleeve condition). */
+  notes?: { field_id: number; value: string }[];
   basic_information: BasicInformation;
 }
 
@@ -40,7 +42,7 @@ export interface WantItem {
   id: number;            // release id
   rating: number;
   date_added: string;
-  notes?: string;
+  notes?: string;          // "" when empty
   basic_information: BasicInformation;
 }
 
@@ -59,17 +61,27 @@ export interface UserProfile {
   seller_rating?: number;
   seller_num_ratings?: number;
   location?: string;
-  currency?: string;
+  /** The user's marketplace currency, e.g. "USD". */
+  curr_abbr?: string;
 }
 
 export interface Price { value: number; currency: string }
+
+/** `original_price` on inventory listings. `converted` is in the authenticated user's currency. */
+export interface OriginalPrice {
+  curr_abbr: string;
+  value: number;
+  formatted?: string;
+  converted?: { curr_abbr: string; value: number; formatted?: string };
+}
 
 export interface Listing {
   id: number;
   status: string;
   condition: string;        // e.g. "Very Good Plus (VG+)"
   sleeve_condition: string; // may also be "Generic", "Not Graded", "No Cover"
-  price: Price;
+  price: Price;             // in the seller's currency
+  original_price?: OriginalPrice;
   ships_from?: string;
   comments?: string;
   allow_offers?: boolean;
@@ -78,9 +90,12 @@ export interface Listing {
   seller: {
     id: number;
     username: string;
-    stats?: { rating: string | number; stars?: number; total: number };
+    stats?: { rating: string | number; stars?: number; total: number }; // rating is a string, e.g. "99.8"
   };
-  release: { id: number; description: string; thumb?: string; year?: number };
+  release: {
+    id: number; description: string; thumbnail?: string; year?: number;
+    artist?: string; title?: string; format?: string; catalog_number?: string;
+  };
 }
 
 export interface MarketplaceStats {
@@ -113,6 +128,7 @@ export interface LabelRelease {
   catno?: string;
   format?: string;
   thumb?: string;
+  stats?: { community?: { in_wantlist: number; in_collection: number } };
 }
 
 /** Item from /database/search */
