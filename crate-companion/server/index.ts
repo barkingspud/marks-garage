@@ -28,7 +28,7 @@ if (config.mock) {
 }
 
 const root = new Hono();
-root.route('/', createApp(api, { connection }));
+root.route('/', createApp(api, { connection, userAgent: config.userAgent }));
 
 if (config.production) {
   root.use('/*', serveStatic({ root: './dist' }));

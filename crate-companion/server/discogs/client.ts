@@ -126,6 +126,15 @@ export class DiscogsClient implements DiscogsApi {
     await this.request('PUT', `/users/${encodeURIComponent(username)}/wants/${releaseId}`);
     this.invalidateUser(username);
   }
+  async addToCollection(username: string, releaseId: number) {
+    await this.request('POST', `/users/${encodeURIComponent(username)}/collection/folders/1/releases/${releaseId}`);
+    this.invalidateUser(username);
+  }
+  collectionFields(username: string) {
+    return this.request<Awaited<ReturnType<DiscogsApi['collectionFields']>>>(
+      'GET', `/users/${encodeURIComponent(username)}/collection/fields`, {}, HOUR,
+    );
+  }
   async removeWant(username: string, releaseId: number) {
     await this.request('DELETE', `/users/${encodeURIComponent(username)}/wants/${releaseId}`);
     this.invalidateUser(username);

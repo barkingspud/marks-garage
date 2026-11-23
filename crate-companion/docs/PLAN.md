@@ -65,6 +65,9 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
 - [ ] Wantlist notes and a per-item "max price"/"min grade" that overrides the global criteria.
 - [ ] Saved seller lists. Suggest sellers from your Discogs order history (`/marketplace/orders`).
 - [ ] Multiple accounts ("collections") and collection custom fields (e.g. media condition you own).
+- [x] Record detail screen, with your grades from collection custom fields.
+- [x] Record Check: find a pressing by text, catalogue number or barcode; owned/wanted status;
+      price comparison; add to collection.
 - [ ] Collection stats page (by decade, style, format, value).
 
 ### Phase 3: Multi-user and hosting
@@ -83,7 +86,8 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
 - [ ] Point the apps at the hosted API from phase 3, and use a custom-scheme or app-link
       redirect for the OAuth callback.
 - [ ] Open Discogs links in the in-app browser (Capacitor Browser plugin) instead of leaving the app.
-- [ ] Barcode scanner to add records (Discogs search supports `barcode=`).
+- [ ] Native barcode scanner (Capacitor plugin). The web version scans with the camera where
+      the browser has BarcodeDetector (Chrome on Android); elsewhere you type the digits.
 - [ ] Offline read-only cache of the collection.
 - [ ] Store listings: Google Play (one-time developer fee) and the App Store (Apple Developer
       Program, yearly fee; building the iOS app needs a Mac with Xcode, or a cloud Mac build service).

@@ -1,0 +1,176 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { MEDIA_GRADES } from '../../../shared/conditions';
+import type { SearchResult } from '../../../shared/discogs-types';
+import { api } from '../api';
+import { Cover } from '../components/Cover';
+import { ICONS } from '../components/Layout';
+import { Empty, ErrorBox, Loading, PageHeader, money } from '../components/ui';
+import { useRoom } from '../room';
+
+const split = (t: string) => { const i = t.indexOf(' - '); return i > 0 ? { artist: t.slice(0, i).replace(/\*$/, '').replace(/ \(\d+\)$/, ''), title: t.slice(i + 3) } : { artist: '', title: t }; };
+
+/** In a shop: find the exact pressing, see if you own or want it, and judge the asking price. */
+export function Check() {
+  const qc = useQueryClient();
+  const [text, setText] = useState('');
+  const [query, setQuery] = useState<{ q?: string; barcode?: string } | null>(null);
+  const [pick, setPick] = useState<SearchResult | null>(null);
+  const [price, setPrice] = useState('');
+  const [media, setMedia] = useState('VG+');
+  const [sleeve, setSleeve] = useState('VG+');
+  const [scanning, setScanning] = useState(false);
+
+  const coll = useQuery({ queryKey: ['collection', 0], queryFn: () => api.collection(0) });
+  const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
+  const search = useQuery({ queryKey: ['check', query], queryFn: () => api.searchReleases(query!), enabled: !!query });
+  const stats = useQuery({ queryKey: ['stats', pick?.id], queryFn: () => api.stats(pick!.id), enabled: !!pick });
+  const bought = useMutation({
+    mutationFn: () => api.addToCollection(pick!.id, wantedThis),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['collection'] }); void qc.invalidateQueries({ queryKey: ['wants'] }); },
+  });
+  useRoom(pick ? pick.cover_image || pick.thumb : null, 232);
+
+  useEffect(() => { setPick(search.data?.results[0] ?? null); bought.reset(); }, [search.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function submit(value = text) {
+    const v = value.trim();
+    if (!v) return;
+    const digits = v.replace(/[\s-]/g, '');
+    setQuery(/^\d{8,14}$/.test(digits) ? { barcode: digits } : { q: v });
+  }
+
+  const ownedIds = new Set(coll.data?.items.map((i) => i.id));
+  const ownedMasters = new Set(coll.data?.items.map((i) => i.basic_information.master_id).filter(Boolean));
+  const wantIds = new Set(wants.data?.items.map((w) => w.id));
+  const wantMasters = new Set(wants.data?.items.map((w) => w.basic_information.master_id).filter(Boolean));
+  const ownThis = !!pick && ownedIds.has(pick.id);
+  const ownOther = !!pick && !ownThis && !!pick.master_id && ownedMasters.has(pick.master_id);
+  const wantedThis = !!pick && wantIds.has(pick.id);
+  const wantedOther = !!pick && !wantedThis && !!pick.master_id && wantMasters.has(pick.master_id);
+
+  const asking = Number(price.replace(/[^\d.]/g, ''));
+  const low = stats.data?.lowest_price;
+  const diff = low && asking > 0 ? asking - low.value : null;
+  const head = pick ? split(pick.title) : null;
+
+  return (
+    <div className="page" style={{ maxWidth: 760 }}>
+      <PageHeader title="Check a record" sub="In a shop? Find the pressing in your hand and see if the price is fair." />
+
+      <form className="toolbar" onSubmit={(e) => { e.preventDefault(); submit(); }} role="search">
+        <label className="field-glass">
+          <svg viewBox="0 0 24 24" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></svg>
+          <span className="sr-only">Artist and title, catalogue number or barcode</span>
+          <input type="search" inputMode="search" placeholder="Artist and title, cat# or barcode" value={text} onChange={(e) => setText(e.target.value)} />
+        </label>
+        <button type="button" className="btn icon" aria-label="Scan barcode" onClick={() => setScanning(true)}>
+          <svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg>
+        </button>
+        <button type="submit" className="btn primary" disabled={!text.trim()}>Find</button>
+      </form>
+      {scanning && <Scanner onCode={(c) => { setScanning(false); setText(c); submit(c); }} onClose={() => setScanning(false)} />}
+
+      {search.isFetching && <Loading label="Searching Discogs…" />}
+      <ErrorBox error={search.error} />
+      {search.data && !search.data.results.length && <Empty title="No releases found">Try the catalogue number from the spine or label, or the barcode digits.</Empty>}
+
+      {pick && head && (
+        <>
+          <div className="check-found">
+            <Cover src={pick.cover_image || pick.thumb} id={pick.id} alt={`Cover of ${head.title}`} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <h2 style={{ fontSize: 24 }}>{head.title}</h2>
+              <span className="sub">{head.artist}{pick.year ? `, ${pick.year}` : ''}</span>
+              <div className="status-row">
+                {ownThis && <span className="status yes">You own this pressing</span>}
+                {ownOther && <span className="status yes">You own another pressing</span>}
+                {wantedThis && <span className="status yes">On your wantlist</span>}
+                {wantedOther && <span className="status yes">Another pressing is on your wantlist</span>}
+                {!ownThis && !ownOther && !wantedThis && !wantedOther && <span className="status">Not in your collection or wantlist</span>}
+              </div>
+            </div>
+          </div>
+
+          <fieldset className="glass panel" style={{ margin: 0 }}>
+            <legend className="sr-only">Which pressing is in your hand?</legend>
+            <h3 aria-hidden>Which pressing is in your hand?</h3>
+            {search.data!.results.slice(0, 6).map((r) => (
+              <label key={r.id} className="pressing">
+                <input type="radio" name="pressing" checked={pick.id === r.id} onChange={() => setPick(r)} />
+                <span><b>{[r.label?.[0], r.catno].filter(Boolean).join(' ') || split(r.title).title}</b>
+                  <small>{[r.country, r.year, r.format?.slice(0, 3).join(', ')].filter(Boolean).join(', ')}</small></span>
+              </label>
+            ))}
+            <p className="sub small" style={{ marginTop: 10 }}>
+              {search.data!.total > 6 ? `${search.data!.total} releases match. ` : ''}Many pressings share a catalogue number: compare the runout etched near the label.
+            </p>
+          </fieldset>
+
+          <section className="glass panel" aria-labelledby="h-fair">
+            <h2 id="h-fair">Is it a fair price?</h2>
+            <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+              <label className="field">Shop price<input className="input" inputMode="decimal" placeholder="12.00" value={price} onChange={(e) => setPrice(e.target.value)} /></label>
+              <label className="field">Record<select className="input" value={media} onChange={(e) => setMedia(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
+              <label className="field">Sleeve<select className="input" value={sleeve} onChange={(e) => setSleeve(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }} aria-live="polite">
+              {stats.isLoading && <Loading label="Checking Discogs…" />}
+              {stats.data && (low && stats.data.num_for_sale ? (
+                <>
+                  <div className="verdict"><b>{money(low.value, low.currency)}</b><span>cheapest of {stats.data.num_for_sale} on Discogs</span></div>
+                  {diff !== null && (
+                    <p>{Math.abs(diff) < 0.5 ? 'About the same as the cheapest listing.'
+                      : diff > 0 ? `This shop is asking ${money(diff, low.currency)} more than the cheapest listing. Online copies add shipping, so it may still be worth it.`
+                      : `This shop is ${money(-diff, low.currency)} cheaper than any copy on Discogs.`}</p>
+                  )}
+                  <p className="sub small">Listings are asking prices for any grade, not sales. Your copy is {media}/{sleeve}.</p>
+                </>
+              ) : <p className="sub">No copies of this pressing are listed on Discogs right now, so there's nothing to compare with.</p>)}
+            </div>
+          </section>
+
+          <div className="page-actions">
+            {!ownThis && <button className="btn primary" disabled={bought.isPending || bought.isSuccess} onClick={() => bought.mutate()}>{bought.isSuccess ? 'Added to your collection' : 'I bought it'}</button>}
+            {stats.data?.num_for_sale ? <a className="btn" href={`https://www.discogs.com/sell/release/${pick.id}`} target="_blank" rel="noreferrer">See the listings</a> : null}
+            {ownThis && <Link className="btn" to={`/record/${pick.id}`}>Open your copy</Link>}
+          </div>
+          {bought.isSuccess && <p className="sub">Added to your Discogs collection{wantedThis ? ' and removed from your wantlist' : ''}.</p>}
+          <ErrorBox error={bought.error} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Camera barcode scanning where the browser supports it (Chrome on Android); typing always works. */
+function Scanner({ onCode, onClose }: { onCode: (c: string) => void; onClose: () => void }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [msg, setMsg] = useState('Point the camera at the barcode.');
+  useEffect(() => {
+    const Detector = (window as unknown as { BarcodeDetector?: new (o: object) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector;
+    if (!Detector || !navigator.mediaDevices?.getUserMedia) { setMsg("This browser can't scan barcodes. Type the numbers under the barcode instead."); return; }
+    let stream: MediaStream | undefined; let timer = 0; let stopped = false;
+    const detector = new Detector({ formats: ['ean_13', 'upc_a', 'ean_8', 'upc_e'] });
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then((s) => {
+      stream = s;
+      if (stopped || !video.current) return;
+      video.current.srcObject = s; void video.current.play();
+      const tick = async () => {
+        if (stopped || !video.current) return;
+        const codes = await detector.detect(video.current).catch(() => []);
+        if (codes[0]) onCode(codes[0].rawValue); else timer = window.setTimeout(tick, 300);
+      };
+      void tick();
+    }).catch(() => setMsg('Camera access was blocked. Type the numbers under the barcode instead.'));
+    return () => { stopped = true; window.clearTimeout(timer); stream?.getTracks().forEach((t) => t.stop()); };
+  }, [onCode]);
+  return (
+    <div className="glass panel" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <video ref={video} muted playsInline style={{ width: '100%', borderRadius: 12, background: '#000', maxHeight: 280, objectFit: 'cover' }} />
+      <p className="sub">{msg}</p>
+      <button className="btn" onClick={onClose}>Close camera</button>
+    </div>
+  );
+}

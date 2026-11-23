@@ -1,29 +1,24 @@
 import { useState } from 'react';
 
+/** Discogs covers go through our server so the app can read their colours (see room.tsx). */
+export function imageUrl(src?: string | null): string | null {
+  if (!src || src.includes('spacer.gif')) return null;
+  return src.startsWith('https://i.discogs.com/') ? `/api/img?u=${encodeURIComponent(src)}` : src;
+}
+
 /**
- * Release artwork, or a drawn record label when Discogs has none or the image fails to load.
- * `alt` describes the record (artist and title). Leave it empty when the same text is
- * already right next to the image, so screen readers don't read it twice.
+ * Album artwork, square, filling its container. When there's no image or it fails to load,
+ * a drawn record label stands in, tinted from the release id so covers stay distinguishable.
+ * `alt` describes the record; leave it empty when the title is already printed beside it.
  */
-export function Cover({ src, id, size = 56, alt = '', fill = false }: {
-  src?: string; id: number; size?: number; alt?: string; fill?: boolean;
-}) {
+export function Cover({ src, id, alt = '', className = '' }: { src?: string | null; id: number; alt?: string; className?: string }) {
   const [failed, setFailed] = useState(false);
-  const dims = fill ? {} : { width: size, height: size };
-  if (src && !src.includes('spacer.gif') && !failed) {
-    return (
-      <img className="cover" src={src} alt={alt} {...dims} loading="lazy" decoding="async"
-        onError={() => setFailed(true)} />
-    );
+  const url = imageUrl(src);
+  if (url && !failed) {
+    return <img className={`cover ${className}`} src={url} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} />;
   }
-  const hue = (id * 47) % 360;
   return (
-    <div
-      className="cover cover-ph"
-      style={{ ...(fill ? {} : { width: size, height: size }), ['--h' as string]: hue }}
-      role={alt ? 'img' : undefined}
-      aria-label={alt || undefined}
-      aria-hidden={alt ? undefined : true}
-    />
+    <div className={`cover cover-ph ${className}`} style={{ ['--h' as string]: (id * 47) % 360 }}
+      role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true} />
   );
 }

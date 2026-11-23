@@ -1,4 +1,4 @@
-import type { CollectionFolder, CollectionItem, MarketplaceStats, UserProfile, WantItem } from '../../shared/discogs-types';
+import type { CollectionField, CollectionFolder, CollectionItem, MarketplaceStats, SearchResult, UserProfile, WantItem } from '../../shared/discogs-types';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -48,4 +48,9 @@ export const api = {
     call<{ id: string }>(`/jobs/${kind}`, { method: 'POST', body: JSON.stringify(body) }),
   job: <T,>(id: string) => call<Job<T>>(`/jobs/${id}`),
   disconnect: () => call<AuthStatus>('/auth/disconnect', { method: 'POST' }),
+  fields: () => call<{ fields: CollectionField[] }>('/collection/fields'),
+  addToCollection: (releaseId: number, removeFromWants: boolean) =>
+    call<{ ok: true }>('/collection', { method: 'POST', body: JSON.stringify({ releaseId, removeFromWants }) }),
+  searchReleases: (p: { q?: string; barcode?: string; catno?: string }) =>
+    call<{ total: number; results: SearchResult[] }>(`/search/releases?${new URLSearchParams(Object.entries(p).filter(([, v]) => v) as [string, string][])}`),
 };

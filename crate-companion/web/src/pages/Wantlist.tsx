@@ -1,21 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { MarketplaceStats } from '../../../shared/discogs-types';
 import { api } from '../api';
 import { Cover } from '../components/Cover';
-import { Empty, ErrorBox, Loading, PageHeader, Sticker, artistLine, discogsUrl } from '../components/ui';
+import { Empty, ErrorBox, Loading, PageHeader, artistLine, money } from '../components/ui';
+import { useRoom } from '../room';
 
 export function Wantlist() {
-  const qc = useQueryClient();
   const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
   const [q, setQ] = useState('');
   const [stats, setStats] = useState<Record<number, MarketplaceStats | 'loading' | 'error'>>({});
   const [checkingAll, setCheckingAll] = useState(false);
-
-  const remove = useMutation({
-    mutationFn: api.removeWant,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wants'] }),
-  });
+  useRoom(null, 340);
 
   const items = wants.data?.items ?? [];
   const shown = useMemo(() => {
@@ -32,69 +29,60 @@ export function Wantlist() {
       setStats((s) => ({ ...s, [id]: 'error' }));
     }
   }
-  // Sequential on purpose: each check is one Discogs API call (60/min budget).
+  // One at a time on purpose: each check is one Discogs request (60 a minute allowed).
   async function checkAll() {
     setCheckingAll(true);
     for (const w of shown) if (!stats[w.id] || stats[w.id] === 'error') await check(w.id);
     setCheckingAll(false);
   }
+  const done = shown.filter((w) => typeof stats[w.id] === 'object').length;
 
   return (
-    <>
+    <div className="page">
       <PageHeader title="Wantlist" sub={wants.data ? `${items.length} records you're after` : undefined}>
-        <button className="primary" onClick={checkAll} disabled={checkingAll || !items.length}>
-          {checkingAll ? 'Checking prices…' : 'Check all prices'}
+        <button className="btn primary" onClick={checkAll} disabled={checkingAll || !items.length}>
+          {checkingAll ? `Checking prices, ${done} of ${shown.length}…` : 'Check all prices'}
         </button>
       </PageHeader>
-      <div className="toolbar">
-        <input type="search" placeholder="Filter wantlist" value={q} onChange={(e) => setQ(e.target.value)} />
-      </div>
+      <label className="field-glass">
+        <svg viewBox="0 0 24 24" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></svg>
+        <span className="sr-only">Filter your wantlist</span>
+        <input type="search" placeholder="Filter your wantlist" value={q} onChange={(e) => setQ(e.target.value)} />
+      </label>
       {wants.isLoading && <Loading />}
-      <ErrorBox error={wants.error ?? remove.error} />
-      {wants.data && items.length === 0 && (
-        <Empty title="Your wantlist is empty">
-          Add records on Discogs, or pick some from Discover with the Want button.
-        </Empty>
-      )}
+      <ErrorBox error={wants.error} />
+      {wants.data && !items.length && <Empty title="Your wantlist is empty">Add records on Discogs, or from Discover with Add to wantlist.</Empty>}
+
       <ul className="bin">
         {shown.map((w) => {
           const b = w.basic_information;
           const st = stats[w.id];
-          const url = discogsUrl('release', b.id);
-          const shop = `https://www.discogs.com/sell/release/${w.id}`;
           const priced = st && typeof st === 'object' ? st : undefined;
           return (
             <li key={w.id} className="bin-item">
-              <a className="bin-cover" href={url} target="_blank" rel="noreferrer" tabIndex={-1} aria-hidden>
-                <Cover src={b.cover_image || b.thumb} id={b.id} fill />
-              </a>
-              {priced?.lowest_price && priced.num_for_sale > 0 && (
-                <a className="sticker-link" href={shop} target="_blank" rel="noreferrer"
-                  aria-label={`${priced.num_for_sale} for sale on Discogs, from ${priced.lowest_price.value.toFixed(2)} ${priced.lowest_price.currency}`}>
-                  <Sticker value={priced.lowest_price.value} currency={priced.lowest_price.currency} label="from" />
+              <Link to={`/record/${w.id}`} className="bin-card" aria-label={`${b.title} by ${artistLine(b)}`}>
+                <Cover src={b.cover_image || b.thumb} id={b.id} />
+                <span className="bin-meta" aria-hidden>
+                  <b>{b.title}</b>
+                  <span>{artistLine(b)}{priced ? `, ${priced.num_for_sale ? `${priced.num_for_sale} for sale` : 'none for sale'}` : ''}</span>
+                </span>
+              </Link>
+              {priced?.lowest_price && priced.num_for_sale > 0 ? (
+                <a className="tag" href={`https://www.discogs.com/sell/release/${w.id}`} target="_blank" rel="noreferrer"
+                  aria-label={`${priced.num_for_sale} for sale from ${money(priced.lowest_price.value, priced.lowest_price.currency)}`}>
+                  from <b>{money(priced.lowest_price.value, priced.lowest_price.currency)}</b>
                 </a>
-              )}
-              <div className="bin-text">
-                <a href={url} target="_blank" rel="noreferrer" className="bin-title">{b.title}</a>
-                <div className="bin-artist">{artistLine(b)}</div>
-                <div className="bin-meta">{b.year || null}</div>
-                <div className="bin-actions">
-                  {st === undefined && <button className="small" onClick={() => check(w.id)}>Check price</button>}
-                  {st === 'loading' && <span className="spinner" aria-label="Checking price" />}
-                  {st === 'error' && <span className="price-note">Price unavailable. <button className="ghost small" onClick={() => check(w.id)}>Try again</button></span>}
-                  {priced && (
-                    <a className="price-note" href={shop} target="_blank" rel="noreferrer">
-                      {priced.num_for_sale ? `${priced.num_for_sale} for sale` : 'None for sale'}
-                    </a>
-                  )}
-                  <button className="ghost small danger" disabled={remove.isPending} onClick={() => remove.mutate(w.id)}
-                    aria-label={`Remove ${b.title} from wantlist`}>Remove</button>
-                </div>
-              </div>
+              ) : st === 'loading' ? (
+                <span className="tag" role="status"><span className="mini-disc" style={{ width: 16, height: 16 }} aria-hidden /><span className="sr-only">Checking price</span></span>
+              ) : st === 'error' ? (
+                <button className="tag tag-btn" onClick={() => check(w.id)}>Try again</button>
+              ) : !priced ? (
+                <button className="tag tag-btn" onClick={() => check(w.id)} aria-label={`Check price of ${b.title}`}>Check price</button>
+              ) : null}
             </li>
           );
         })}
       </ul>
-    </>
+    </div>
   );
 }

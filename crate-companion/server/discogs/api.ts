@@ -1,5 +1,5 @@
 import type {
-  ArtistRelease, CollectionFolder, CollectionItem, Identity, LabelRelease, Listing,
+  ArtistRelease, CollectionField, CollectionFolder, CollectionItem, Identity, LabelRelease, Listing,
   MarketplaceStats, Pagination, SearchResult, UserProfile, WantItem,
 } from '../../shared/discogs-types';
 
@@ -13,6 +13,9 @@ export interface SearchParams {
   year?: string;     // "1995" or "1990-1999"
   format?: string;
   country?: string;
+  /** Catalogue number and barcode (Record Check). */
+  catno?: string;
+  barcode?: string;
   /** Artist name (fuzzy match; Discogs ignores the " (2)" suffix form). */
   artist?: string;
   /** Label name (matched by name, not id). */
@@ -34,6 +37,9 @@ export interface DiscogsApi {
   collectionValue(username: string): Promise<{ minimum: string; median: string; maximum: string }>;
   wantsPage(username: string, page: number, perPage?: number): Promise<Paged<'wants', WantItem>>;
   addWant(username: string, releaseId: number): Promise<void>;
+  /** Add a release to the "Uncategorized" folder (id 1). */
+  addToCollection(username: string, releaseId: number): Promise<void>;
+  collectionFields(username: string): Promise<{ fields: CollectionField[] }>;
   removeWant(username: string, releaseId: number): Promise<void>;
   marketplaceStats(releaseId: number, currency?: string): Promise<MarketplaceStats>;
   inventoryPage(username: string, page: number, perPage?: number): Promise<Paged<'listings', Listing>>;

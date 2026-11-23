@@ -13,7 +13,7 @@ export function DisconnectButton() {
   });
   return (
     <button
-      className="small ghost"
+      className="btn small"
       disabled={m.isPending}
       onClick={() => {
         if (confirm('Disconnect your Discogs account from Crate Companion?')) m.mutate();

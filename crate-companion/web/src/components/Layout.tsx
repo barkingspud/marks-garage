@@ -1,42 +1,71 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import type { Status } from '../api';
+import { RoomProvider } from '../room';
 import { DisconnectButton } from './Disconnect';
 
+const ICONS = {
+  home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+  collection: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+  wantlist: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
+  sellers: 'M4 8h13l-3-3M20 16H7l3 3',
+  discover: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6',
+  barcode: 'M4 6v12M7 6v12M11 6v12M14 6v12M18 6v12M20 6v12',
+};
+export const Icon = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden><path d={d} /></svg>;
+export { ICONS };
+
 const NAV = [
-  { to: '/', label: 'Home', icon: '◉' },
-  { to: '/collection', label: 'Collection', icon: '▤' },
-  { to: '/wantlist', label: 'Wantlist', icon: '♡' },
-  { to: '/match', label: 'Sellers', icon: '⇄' },
-  { to: '/discover', label: 'Discover', icon: '✦' },
+  { to: '/', label: 'Home', icon: ICONS.home },
+  { to: '/collection', label: 'Collection', icon: ICONS.collection },
+  { to: '/wantlist', label: 'Wantlist', icon: ICONS.wantlist },
+  { to: '/match', label: 'Sellers', icon: ICONS.sellers },
+  { to: '/discover', label: 'Discover', icon: ICONS.discover },
 ];
 
 export function Layout({ status }: { status: Status }) {
   return (
-    <div className="shell">
-      <nav className="nav">
-        <div className="brand"><img src="/icon.svg" alt="" width={28} height={28} /> Crate Companion</div>
-        {NAV.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.to === '/'} className="nav-link">
-            <span className="nav-icon" aria-hidden>{n.icon}</span>
-            <span>{n.label}</span>
-          </NavLink>
-        ))}
-        <div className="nav-foot muted">
-          {status.mock ? <span className="pill">Demo data</span> : status.username && (
-            <>
-              Signed in as <b>{status.username}</b>
-              {status.auth?.method === 'oauth' && <div><DisconnectButton /></div>}
-            </>
-          )}
+    <RoomProvider>
+      {(style) => (
+        <div className="room" style={style}>
+          <div className="shell">
+            <aside className="side glass glass-blur">
+              <NavLink to="/" className="brand"><span className="brand-disc" aria-hidden /> Crate Companion</NavLink>
+              <nav aria-label="Main" className="side-nav">
+                {NAV.map((n) => (
+                  <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}>
+                    <Icon d={n.icon} />{n.label}
+                  </NavLink>
+                ))}
+              </nav>
+              <div className="side-foot">
+                <NavLink to="/check" className="btn"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg>Check a record</NavLink>
+                <div className="who">
+                  {status.mock ? <span>Demo data</span> : status.username && <span>Signed in as <b>{status.username}</b></span>}
+                  {status.auth?.method === 'oauth' && <DisconnectButton />}
+                </div>
+              </div>
+            </aside>
+            <main className="main">
+              <Outlet />
+              <p className="attribution">
+                Data provided by <a href="https://www.discogs.com" target="_blank" rel="noreferrer">Discogs</a>.
+                Crate Companion is not affiliated with or endorsed by Discogs.
+              </p>
+            </main>
+          </div>
+          <nav aria-label="Main" className="tabbar glass glass-blur">
+            {NAV.map((n) => (
+              <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
+                <Icon d={n.icon} /><span>{n.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+          <svg className="grain" aria-hidden width="100%" height="100%">
+            <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch" /><feColorMatrix values="0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1 0" /></filter>
+            <rect width="100%" height="100%" filter="url(#grain)" />
+          </svg>
         </div>
-      </nav>
-      <main className="main">
-        <Outlet />
-        <footer className="attribution muted">
-          Data provided by <a href="https://www.discogs.com" target="_blank" rel="noreferrer">Discogs</a>.
-          Crate Companion is not affiliated with or endorsed by Discogs.
-        </footer>
-      </main>
-    </div>
+      )}
+    </RoomProvider>
   );
 }

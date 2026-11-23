@@ -9,9 +9,11 @@ import { Collection } from './pages/Collection';
 import { Discover } from './pages/Discover';
 import { Home } from './pages/Home';
 import { Match } from './pages/Match';
+import { Record } from './pages/Record';
+import { Check } from './pages/Check';
 import { Setup } from './pages/Setup';
 import { Wantlist } from './pages/Wantlist';
-import '@fontsource-variable/archivo/wdth.css';
+import '@fontsource-variable/bricolage-grotesque/opsz.css';
 import './styles.css';
 
 const queryClient = new QueryClient({
@@ -20,8 +22,8 @@ const queryClient = new QueryClient({
 
 function App() {
   const status = useQuery({ queryKey: ['status'], queryFn: api.status });
-  if (status.isLoading) return <Loading />;
-  if (status.error) return <ErrorBox error={`Can't reach the API server — is "npm run dev" running? (${(status.error as Error).message})`} />;
+  if (status.isLoading) return <div className="room"><main className="main"><Loading /></main></div>;
+  if (status.error) return <div className="room"><main className="main"><ErrorBox error={`Can't reach the app's server. Is "npm run dev" running? (${(status.error as Error).message})`} /></main></div>;
   if (!status.data!.configured) return <Setup status={status.data!} />;
   return (
     <Routes>
@@ -31,6 +33,8 @@ function App() {
         <Route path="wantlist" element={<Wantlist />} />
         <Route path="match" element={<Match />} />
         <Route path="discover" element={<Discover />} />
+        <Route path="record/:releaseId" element={<Record />} />
+        <Route path="check" element={<Check />} />
       </Route>
     </Routes>
   );

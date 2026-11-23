@@ -4,6 +4,7 @@ import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
 import type { DiscogsConnection } from './auth/connection';
 import type { DiscogsApi } from './discogs/api';
 import { DiscogsError } from './discogs/client';
+import { TtlCache } from './lib/cache';
 import { getJob, startJob } from './lib/jobs';
 import { buildRecommendations, fetchCollection, fetchWants, runSellerMatch } from './services';
 
@@ -20,8 +21,20 @@ export function publicOrigin(requestUrl: string, forwardedHost?: string, forward
   return `${proto}://${host}`;
 }
 
-export function createApp(api: DiscogsApi, opts: { connection?: DiscogsConnection } = {}) {
+async function fetchImage(url: string, userAgent: string): Promise<{ body: ArrayBuffer; type: string } | null> {
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': userAgent } });
+    const type = res.headers.get('content-type') ?? '';
+    if (!res.ok || !type.startsWith('image/')) return null;
+    return { body: await res.arrayBuffer(), type };
+  } catch {
+    return null;
+  }
+}
+
+export function createApp(api: DiscogsApi, opts: { connection?: DiscogsConnection; userAgent?: string } = {}) {
   const app = new Hono().basePath('/api');
+  const images = new TtlCache<{ body: ArrayBuffer; type: string }>(400);
   const conn = opts.connection;
   let mockUser: string | undefined;
 
@@ -113,6 +126,43 @@ export function createApp(api: DiscogsApi, opts: { connection?: DiscogsConnectio
   app.delete('/wants/:releaseId', async (c) => {
     await api.removeWant(await me(), Number(c.req.param('releaseId')));
     return c.json({ ok: true });
+  });
+
+  app.get('/collection/fields', async (c) => c.json(await api.collectionFields(await me())));
+
+  // "I bought it" from Record Check: add to the collection, and drop it from the wantlist.
+  app.post('/collection', async (c) => {
+    const body = await c.req.json<{ releaseId?: number; removeFromWants?: boolean }>();
+    if (!body.releaseId) throw new HTTPException(400, { message: 'releaseId required' });
+    const u = await me();
+    await api.addToCollection(u, body.releaseId);
+    if (body.removeFromWants) await api.removeWant(u, body.releaseId).catch(() => undefined);
+    return c.json({ ok: true });
+  });
+
+  // Record Check: find the exact pressing by text, catalogue number or barcode.
+  app.get('/search/releases', async (c) => {
+    const q = c.req.query('q')?.trim();
+    const barcode = c.req.query('barcode')?.replace(/\D/g, '');
+    const catno = c.req.query('catno')?.trim();
+    if (!q && !barcode && !catno) throw new HTTPException(400, { message: 'Type an artist, title, catalogue number or barcode.' });
+    await me();
+    const r = await api.search({ q: barcode ? undefined : q, barcode: barcode || undefined, catno: catno || undefined, type: 'release', per_page: 25 });
+    return c.json({ total: r.pagination.items, results: r.results });
+  });
+
+  // Cover images, served from our own address so the app can read their colours
+  // (browsers block reading pixels of images from other sites). Discogs images only.
+  app.get('/img', async (c) => {
+    const u = c.req.query('u') ?? '';
+    let url: URL;
+    try { url = new URL(u); } catch { throw new HTTPException(400, { message: 'Bad image URL' }); }
+    if (url.protocol !== 'https:' || url.hostname !== 'i.discogs.com') throw new HTTPException(400, { message: 'Only Discogs images' });
+    const hit = images.get(url.toString());
+    const img = hit ?? await fetchImage(url.toString(), opts.userAgent ?? 'CrateCompanion/0.1');
+    if (!img) throw new HTTPException(404, { message: 'Image unavailable' });
+    if (!hit) images.set(url.toString(), img, 24 * 60 * 60_000);
+    return new Response(img.body, { headers: { 'Content-Type': img.type, 'Cache-Control': 'public, max-age=604800, immutable' } });
   });
 
   app.get('/stats/:releaseId', async (c) =>
