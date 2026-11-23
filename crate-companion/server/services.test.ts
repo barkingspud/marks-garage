@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CRITERIA } from '../shared/matching';
 import { MockDiscogs } from './discogs/mock';
-import { buildRecommendations, runSellerMatch, splitTitle } from './services';
+import type { DiscogsApi } from './discogs/api';
+import { artistAlbums, buildRecommendations, runSellerMatch, splitTitle } from './services';
 
 const noop = () => {};
 
@@ -31,5 +32,23 @@ describe('splitTitle', () => {
     expect(splitTitle('UFO (5) - Doctor Doctor')).toEqual({ artist: 'UFO', title: 'Doctor Doctor' });
     expect(splitTitle('Iggy And The Stooges* - Raw Power')).toEqual({ artist: 'Iggy And The Stooges', title: 'Raw Power' });
     expect(splitTitle('Untitled')).toEqual({ artist: '', title: 'Untitled' });
+  });
+});
+
+describe('artistAlbums', () => {
+  it('keeps only albums credited exactly to the artist and skips unofficial releases', async () => {
+    let asked: unknown;
+    // Results as returned by the live API for artist=America.
+    const api = { search: async (p: unknown) => {
+      asked = p;
+      return { pagination: { page: 1, pages: 1, per_page: 50, items: 3 }, results: [
+        { id: 1, type: 'master', title: 'America (2) - Homecoming', format: ['Vinyl', 'LP', 'Album'] },
+        { id: 2, type: 'master', title: 'The Presidents Of The United States Of America - The Presidents Of The United States Of America', format: ['CD', 'Album'] },
+        { id: 3, type: 'master', title: 'America (2) - Live Bootleg', format: ['CD', 'Album', 'Unofficial Release'] },
+      ] };
+    } } as unknown as DiscogsApi;
+    const r = await artistAlbums(api, 'America (2)');
+    expect(r.map((x) => x.id)).toEqual([1]);
+    expect(asked).toMatchObject({ artist: 'America', format: 'album', type: 'master', sort: 'have' });
   });
 });

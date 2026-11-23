@@ -17,7 +17,8 @@
    needed. It weights artists, labels, styles, genres and decades. Items you rated 4–5★ count
    for more, and placeholders like "Various" and "Not On Label" are ignored.
 2. **Candidates** come from three sources (about 13 API calls, cached 24 h):
-   - discographies of your top artists (`/artists/{id}/releases`, main roles only);
+   - albums by your top artists, most collected first (`/database/search?artist=…&format=album`,
+     falling back to `/artists/{id}/releases`);
    - the most-collected masters on your top labels, in the style you collect most on each
      (`/database/search?label=…&style=…&sort=have`);
    - masters in your top styles (`/database/search?style=…&type=master`).
@@ -54,7 +55,11 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
       dropped and at most 3 picks per artist. Live result: 48 of 60 picks come from labels.
       Caveat: search matches the label *name* anywhere on a release, so club pressings
       (e.g. Columbia House) bring in other labels' artists.
-- [ ] Artist discographies include singles (e.g. "D'yer Mak'er"); prefer albums.
+- [x] Artist picks are albums: discography masters carry no format, so each top artist is
+      a `/database/search?artist=…&type=master&format=album&sort=have` query, keeping only
+      results credited exactly to that artist (search is fuzzy) and skipping unofficial
+      releases. Falls back to the discography when fewer than 3 albums are found.
+      Live: artist picks went from 5 (some singles) to 18 albums.
 - [ ] Persistent cache (SQLite) so restarts don't re-fetch everything, plus incremental
       collection sync.
 - [ ] Wantlist notes and a per-item "max price"/"min grade" that overrides the global criteria.

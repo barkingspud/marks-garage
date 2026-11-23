@@ -113,6 +113,28 @@ export interface RecommendOptions { artists: number; labels: number; styles: num
  * Search results title masters "Artist - Title". Discogs adds " (2)" etc. to tell apart
  * artists with the same name, and titles sometimes have trailing spaces.
  */
+/** The artist part of a search title exactly as Discogs writes it, e.g. "America (2)". */
+function rawArtist(t: string): string {
+  const i = t.indexOf(' - ');
+  return i > 0 ? t.slice(0, i).trim().replace(/\*$/, '') : '';
+}
+
+/**
+ * An artist's albums, most collected first. Discographies (/artists/{id}/releases) don't
+ * say which masters are albums and which are singles, so search masters with format=album.
+ * Artist search is fuzzy ("America" also finds "The Presidents Of The United States Of
+ * America"), so keep only results credited exactly to this artist.
+ */
+export async function artistAlbums(api: DiscogsApi, name: string) {
+  const r = await api.search({
+    artist: name.replace(/\s+\(\d+\)$/, ''), type: 'master', format: 'album',
+    sort: 'have', sort_order: 'desc', per_page: 50,
+  }).catch(() => undefined);
+  return (r?.results ?? []).filter((s) =>
+    rawArtist(s.title).toLowerCase() === name.toLowerCase() &&
+    !(s.format ?? []).includes('Unofficial Release'));
+}
+
 export function splitTitle(t: string): { artist: string; title: string } {
   const i = t.indexOf(' - ');
   if (i <= 0) return { artist: '', title: t.trim() };
@@ -139,6 +161,20 @@ export async function buildRecommendations(
 
   for (const a of artists) {
     progress(done++, total, `Exploring ${a.name}…`);
+    const source = `you own ${n(a.weight)} by ${a.name}`;
+    const albums = await artistAlbums(api, a.name);
+    if (albums.length >= 3) {
+      for (const s of albums) {
+        const { title } = splitTitle(s.title);
+        candidates.push({
+          masterId: s.master_id || s.id, title, artist: a.name.replace(/\s+\(\d+\)$/, ''),
+          year: s.year ? Number(s.year) : undefined, thumb: s.thumb, styles: s.style, genres: s.genre,
+          community: s.community, artistId: a.id, sources: [source],
+        });
+      }
+      continue;
+    }
+    // Fallback when search finds too few: the full discography (includes singles).
     const r = await api.artistReleases(a.id).catch(() => undefined);
     for (const rel of r?.releases ?? []) {
       if (rel.role !== 'Main') continue;
@@ -148,7 +184,7 @@ export async function buildRecommendations(
         title: rel.title, artist: rel.artist || a.name, year: rel.year, thumb: rel.thumb, artistId: a.id,
         community: rel.stats?.community
           ? { want: rel.stats.community.in_wantlist, have: rel.stats.community.in_collection } : undefined,
-        sources: [`you own ${n(a.weight)} by ${a.name}`],
+        sources: [source],
       });
     }
   }

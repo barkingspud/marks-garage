@@ -15,6 +15,8 @@ Field mappings checked against the live Discogs API.
   style you collect most on that label, instead of the first page of the label's raw catalog
   (which was mostly compilations and unrelated records). Recommendations are capped at 3 per
   artist, and the "*" Discogs adds to name variations is dropped.
+- Recommendations from your top artists are now their albums, most collected first, instead
+  of the start of their discography (which included singles).
 - Types updated: `curr_abbr` on profiles, collection custom-field `notes`, listing `original_price`.
 
 ## 0.1.0 (2026-11-23)

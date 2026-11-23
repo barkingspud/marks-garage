@@ -192,10 +192,11 @@ export class MockDiscogs implements DiscogsApi {
     const items: SearchResult[] = catalog
       .filter((b) => (!params.style || b.styles?.includes(params.style)) && (!params.genre || b.genres?.includes(params.genre)))
       .filter((b) => !params.label || b.labels.some((l) => l.name === params.label))
+      .filter((b) => !params.artist || b.artists[0]!.name === params.artist)
       .filter((b) => !from || (b.year >= from && b.year <= (to || from)))
       .map((b) => ({
         id: b.master_id, type: 'master', master_id: b.master_id, title: `${b.artists[0]!.name} - ${b.title}`,
-        year: String(b.year), genre: b.genres, style: b.styles, label: [b.labels[0]!.name], format: ['Vinyl', 'LP'],
+        year: String(b.year), genre: b.genres, style: b.styles, label: [b.labels[0]!.name], format: ['Vinyl', 'LP', 'Album'],
         thumb: '', community: b.community,
       }));
     if (params.sort === 'have') items.sort((a, b) => (b.community?.have ?? 0) - (a.community?.have ?? 0));

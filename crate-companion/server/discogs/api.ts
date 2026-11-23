@@ -13,6 +13,8 @@ export interface SearchParams {
   year?: string;     // "1995" or "1990-1999"
   format?: string;
   country?: string;
+  /** Artist name (fuzzy match; Discogs ignores the " (2)" suffix form). */
+  artist?: string;
   /** Label name (matched by name, not id). */
   label?: string;
   sort?: 'have' | 'want' | 'year' | 'title';
