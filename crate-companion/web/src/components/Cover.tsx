@@ -1,10 +1,7 @@
 import { useState } from 'react';
+import { api } from '../api';
 
-/** Discogs covers go through our server so the app can read their colours (see room.tsx). */
-export function imageUrl(src?: string | null): string | null {
-  if (!src || src.includes('spacer.gif')) return null;
-  return src.startsWith('https://i.discogs.com/') ? `/api/img?u=${encodeURIComponent(src)}` : src;
-}
+export const imageUrl = api.coverUrl;
 
 /**
  * Album artwork, square, filling its container. When there's no image or it fails to load,

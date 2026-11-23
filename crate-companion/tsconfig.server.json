@@ -5,5 +5,5 @@
     "types": ["node"],
     "tsBuildInfoFile": "node_modules/.tmp/server.tsbuildinfo"
   },
-  "include": ["server", "shared", "vite.config.ts"]
+  "include": ["server", "core", "shared", "vite.config.ts"]
 }

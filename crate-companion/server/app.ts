@@ -1,12 +1,6 @@
-import { Hono } from 'hono';
-import { HTTPException } from 'hono/http-exception';
-import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
-import type { DiscogsConnection } from './auth/connection';
-import type { DiscogsApi } from './discogs/api';
-import { DiscogsError } from './discogs/client';
-import { TtlCache } from './lib/cache';
-import { getJob, startJob } from './lib/jobs';
-import { buildRecommendations, fetchCollection, fetchWants, runSellerMatch } from './services';
+import { Hono, type Context } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { CrateCore, CrateError, errorStatus } from '../core/crate';
 
 /**
  * The address the browser used to reach us. In development the web app (port 5173) proxies
@@ -21,177 +15,70 @@ export function publicOrigin(requestUrl: string, forwardedHost?: string, forward
   return `${proto}://${host}`;
 }
 
-async function fetchImage(url: string, userAgent: string): Promise<{ body: ArrayBuffer; type: string } | null> {
-  try {
-    const res = await fetch(url, { headers: { 'User-Agent': userAgent } });
-    const type = res.headers.get('content-type') ?? '';
-    if (!res.ok || !type.startsWith('image/')) return null;
-    return { body: await res.arrayBuffer(), type };
-  } catch {
-    return null;
-  }
-}
-
-export function createApp(api: DiscogsApi, opts: { connection?: DiscogsConnection; userAgent?: string } = {}) {
+/** The web version's server: the core (core/crate.ts) over HTTP. */
+export function createApp(core: CrateCore) {
   const app = new Hono().basePath('/api');
-  const images = new TtlCache<{ body: ArrayBuffer; type: string }>(400);
-  const conn = opts.connection;
-  let mockUser: string | undefined;
-
-  async function me(): Promise<string> {
-    if (api.isMock) return (mockUser ??= (await api.identity()).username);
-    if (!conn?.connected) {
-      throw new HTTPException(401, { message: 'Not connected to Discogs. Use "Connect with Discogs" on the start page.' });
-    }
-    return conn.currentUsername(async () => (await api.identity()).username);
-  }
 
   app.onError((err, c) => {
-    if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);
-    const status = err instanceof DiscogsError ? err.status : 500;
-    console.error(err);
-    return c.json({ error: err.message }, status === 401 || status === 404 || status === 429 ? status : 502);
+    const { status, message } = errorStatus(err);
+    if (status >= 500) console.error(err);
+    return c.json({ error: message }, status as ContentfulStatusCode);
   });
 
-  app.get('/status', async (c) => {
-    let user: string | null = null;
-    try { user = await me(); } catch { /* not configured */ }
-    return c.json({
-      mock: api.isMock, configured: api.isMock || !!conn?.connected, username: user,
-      requestsInWindow: api.requestsInWindow(), auth: conn?.status() ?? null,
-    });
+  const num = (c: Context, name: string) => Number(c.req.param(name));
+
+  app.get('/status', async (c) => c.json(await core.status()));
+  app.get('/me', async (c) => c.json(await core.profile()));
+  app.get('/folders', async (c) => c.json(await core.folders()));
+  app.get('/collection', async (c) => c.json(await core.collection(Number(c.req.query('folder') ?? 0))));
+  app.get('/collection/fields', async (c) => c.json(await core.fields()));
+  app.post('/collection', async (c) => {
+    const b = await c.req.json<{ releaseId?: number; removeFromWants?: boolean }>();
+    return c.json(await core.addToCollection(b.releaseId ?? 0, b.removeFromWants));
   });
+  app.get('/wants', async (c) => c.json(await core.wants()));
+  app.post('/wants', async (c) => c.json(await core.addWant(await c.req.json())));
+  app.delete('/wants/:releaseId', async (c) => c.json(await core.removeWant(num(c, 'releaseId'))));
+  app.get('/stats/:releaseId', async (c) => c.json(await core.stats(num(c, 'releaseId'), c.req.query('currency'))));
+  app.get('/search/releases', async (c) => c.json(await core.searchReleases({ q: c.req.query('q'), barcode: c.req.query('barcode'), catno: c.req.query('catno') })));
+  app.get('/img', async (c) => {
+    const img = await core.image(c.req.query('u') ?? '');
+    return new Response(img.body, { headers: { 'Content-Type': img.type, 'Cache-Control': 'public, max-age=604800, immutable' } });
+  });
+  app.post('/jobs/match', async (c) => c.json(await core.startMatch(await c.req.json())));
+  app.post('/jobs/recommend', async (c) => c.json(await core.startRecommend()));
+  app.get('/jobs/:id', (c) => c.json(core.job(c.req.param('id'))));
 
   // ------------------------------------------------ Connect with Discogs (OAuth)
   // These are page navigations, not fetches, so they answer with redirects.
 
+  const back = (c: Context, e: unknown) => {
+    console.error(e);
+    return c.redirect(`/?connect_error=${encodeURIComponent(e instanceof Error ? e.message : String(e))}`);
+  };
   app.get('/auth/connect', async (c) => {
-    if (!conn) return c.redirect('/');
+    if (!core.connection) return c.redirect('/');
     try {
       const callback = `${publicOrigin(c.req.url, c.req.header('x-forwarded-host'), c.req.header('x-forwarded-proto'))}/api/auth/callback`;
-      return c.redirect(await conn.begin(callback));
-    } catch (e) {
-      console.error(e);
-      return c.redirect(`/?connect_error=${encodeURIComponent((e as Error).message)}`);
-    }
+      return c.redirect(await core.connectBegin(callback));
+    } catch (e) { return back(c, e); }
   });
-
   app.get('/auth/callback', async (c) => {
-    if (!conn) return c.redirect('/');
+    if (!core.connection) return c.redirect('/');
     // Discogs sends ?denied=<token> when the user clicks "Cancel".
-    if (c.req.query('denied')) return c.redirect('/?connect_error=' + encodeURIComponent('Connection cancelled on Discogs.'));
+    if (c.req.query('denied')) return back(c, new Error('Connection cancelled on Discogs.'));
     const token = c.req.query('oauth_token');
     const verifier = c.req.query('oauth_verifier');
-    if (!token || !verifier) return c.redirect('/?connect_error=' + encodeURIComponent('Discogs did not finish the sign-in.'));
+    if (!token || !verifier) return back(c, new Error('Discogs did not finish the sign-in.'));
     try {
-      await conn.finish(token, verifier);
+      await core.connectFinish(token, verifier);
       return c.redirect('/');
-    } catch (e) {
-      console.error(e);
-      return c.redirect(`/?connect_error=${encodeURIComponent((e as Error).message)}`);
-    }
+    } catch (e) { return back(c, e); }
   });
-
-  app.post('/auth/disconnect', (c) => {
-    if (!conn) throw new HTTPException(400, { message: 'Nothing to disconnect in demo mode.' });
-    conn.disconnect();
-    return c.json(conn.status());
-  });
-
-  app.get('/me', async (c) => {
-    const u = await me();
-    const [profile, value] = await Promise.all([api.profile(u), api.collectionValue(u).catch(() => null)]);
-    return c.json({ profile, value });
-  });
-
-  app.get('/folders', async (c) => c.json(await api.folders(await me())));
-
-  app.get('/collection', async (c) => {
-    const folder = Number(c.req.query('folder') ?? 0);
-    return c.json({ items: await fetchCollection(api, await me(), folder) });
-  });
-
-  app.get('/wants', async (c) => c.json({ items: await fetchWants(api, await me()) }));
-
-  // Add by release id, or by master id (resolved to its main release).
-  app.post('/wants', async (c) => {
-    const body = await c.req.json<{ releaseId?: number; masterId?: number }>();
-    let releaseId = body.releaseId;
-    if (!releaseId && body.masterId) releaseId = (await api.master(body.masterId)).main_release;
-    if (!releaseId) throw new HTTPException(400, { message: 'releaseId or masterId required' });
-    await api.addWant(await me(), releaseId);
-    return c.json({ ok: true, releaseId });
-  });
-
-  app.delete('/wants/:releaseId', async (c) => {
-    await api.removeWant(await me(), Number(c.req.param('releaseId')));
-    return c.json({ ok: true });
-  });
-
-  app.get('/collection/fields', async (c) => c.json(await api.collectionFields(await me())));
-
-  // "I bought it" from Record Check: add to the collection, and drop it from the wantlist.
-  app.post('/collection', async (c) => {
-    const body = await c.req.json<{ releaseId?: number; removeFromWants?: boolean }>();
-    if (!body.releaseId) throw new HTTPException(400, { message: 'releaseId required' });
-    const u = await me();
-    await api.addToCollection(u, body.releaseId);
-    if (body.removeFromWants) await api.removeWant(u, body.releaseId).catch(() => undefined);
-    return c.json({ ok: true });
-  });
-
-  // Record Check: find the exact pressing by text, catalogue number or barcode.
-  app.get('/search/releases', async (c) => {
-    const q = c.req.query('q')?.trim();
-    const barcode = c.req.query('barcode')?.replace(/\D/g, '');
-    const catno = c.req.query('catno')?.trim();
-    if (!q && !barcode && !catno) throw new HTTPException(400, { message: 'Type an artist, title, catalogue number or barcode.' });
-    await me();
-    const r = await api.search({ q: barcode ? undefined : q, barcode: barcode || undefined, catno: catno || undefined, type: 'release', per_page: 25 });
-    return c.json({ total: r.pagination.items, results: r.results });
-  });
-
-  // Cover images, served from our own address so the app can read their colours
-  // (browsers block reading pixels of images from other sites). Discogs images only.
-  app.get('/img', async (c) => {
-    const u = c.req.query('u') ?? '';
-    let url: URL;
-    try { url = new URL(u); } catch { throw new HTTPException(400, { message: 'Bad image URL' }); }
-    if (url.protocol !== 'https:' || url.hostname !== 'i.discogs.com') throw new HTTPException(400, { message: 'Only Discogs images' });
-    const hit = images.get(url.toString());
-    const img = hit ?? await fetchImage(url.toString(), opts.userAgent ?? 'CrateCompanion/0.1');
-    if (!img) throw new HTTPException(404, { message: 'Image unavailable' });
-    if (!hit) images.set(url.toString(), img, 24 * 60 * 60_000);
-    return new Response(img.body, { headers: { 'Content-Type': img.type, 'Cache-Control': 'public, max-age=604800, immutable' } });
-  });
-
-  app.get('/stats/:releaseId', async (c) =>
-    c.json(await api.marketplaceStats(Number(c.req.param('releaseId')), c.req.query('currency'))));
-
-  app.post('/jobs/match', async (c) => {
-    const body = await c.req.json<{ sellers: string[]; criteria?: Partial<MatchCriteria>; maxPagesPerSeller?: number }>();
-    if (!body.sellers?.length) throw new HTTPException(400, { message: 'Add at least one seller' });
-    const u = await me();
-    const job = startJob('match', (progress) => runSellerMatch(api, u, {
-      sellers: body.sellers.slice(0, 20),
-      criteria: { ...DEFAULT_CRITERIA, ...body.criteria },
-      maxPagesPerSeller: Math.min(Math.max(1, body.maxPagesPerSeller ?? 10), 100),
-    }, progress));
-    return c.json({ id: job.id });
-  });
-
-  app.post('/jobs/recommend', async (c) => {
-    const u = await me();
-    const job = startJob('recommend', (progress) =>
-      buildRecommendations(api, u, { artists: 6, labels: 3, styles: 4 }, progress));
-    return c.json({ id: job.id });
-  });
-
-  app.get('/jobs/:id', (c) => {
-    const job = getJob(c.req.param('id'));
-    if (!job) throw new HTTPException(404, { message: 'Job not found' });
-    return c.json(job);
-  });
+  app.post('/auth/token', async (c) => c.json(await core.useToken((await c.req.json<{ token?: string }>()).token ?? '')));
+  app.post('/auth/disconnect', async (c) => c.json(await core.disconnect()));
 
   return app;
 }
+
+export { CrateError };

@@ -1,6 +1,6 @@
 import type { DiscogsAuth } from '../discogs/client';
 import { authorizeUrl, getAccessToken, getRequestToken, PendingRequests, type Consumer } from './oauth';
-import type { ConnectionStore } from './store';
+import { ConnectionStore, type KeyValueStore } from './store';
 
 export type ConnectionMethod = 'oauth' | 'token' | null;
 
@@ -13,10 +13,11 @@ export interface ConnectionStatus {
 
 interface Options {
   consumer?: Consumer;
+  /** A personal token from configuration (.env on a PC). */
   personalToken?: string;
   personalUsername?: string;
   userAgent: string;
-  store: ConnectionStore;
+  store: KeyValueStore;
   /** Applies the chosen credentials to the Discogs client (and clears its cache). */
   apply: (auth: DiscogsAuth | undefined) => void;
   /** Looks up who a set of credentials belongs to. */
@@ -24,22 +25,40 @@ interface Options {
   fetch?: typeof fetch;
 }
 
+const TOKEN_KEY = 'discogs-personal-token';
+
 /**
- * Decides which Discogs credentials the server uses:
- *   1. an account connected with "Connect with Discogs" (saved to disk), else
- *   2. the personal token from .env (DISCOGS_TOKEN), else nothing.
+ * Decides which Discogs credentials to use:
+ *   1. an account connected with "Connect with Discogs" (saved in the store), else
+ *   2. a personal token saved in the app, else
+ *   3. a personal token from configuration (DISCOGS_TOKEN), else nothing.
+ * Create it with DiscogsConnection.create(), which loads what was saved.
  */
 export class DiscogsConnection {
-  private pending = new PendingRequests();
+  private pending: PendingRequests;
+  private saved: ConnectionStore;
   private method: ConnectionMethod = null;
   private username: string | null = null;
+  private savedToken: string | null = null;
 
-  constructor(private o: Options) {
-    const saved = o.consumer ? o.store.load() : undefined;
-    if (saved && o.consumer) {
-      this.use('oauth', { kind: 'oauth', consumer: o.consumer, access: saved }, saved.username);
+  private constructor(private o: Options) {
+    this.pending = new PendingRequests(o.store);
+    this.saved = new ConnectionStore(o.store);
+  }
+
+  static async create(o: Options): Promise<DiscogsConnection> {
+    const c = new DiscogsConnection(o);
+    await c.restore();
+    return c;
+  }
+
+  private async restore() {
+    const saved = this.o.consumer ? await this.saved.load() : undefined;
+    this.savedToken = await this.o.store.get(TOKEN_KEY);
+    if (saved && this.o.consumer) {
+      this.use('oauth', { kind: 'oauth', consumer: this.o.consumer, access: saved }, saved.username);
     } else {
-      this.usePersonalToken();
+      this.useToken();
     }
   }
 
@@ -49,9 +68,10 @@ export class DiscogsConnection {
     this.o.apply(auth);
   }
 
-  private usePersonalToken() {
-    if (this.o.personalToken) {
-      this.use('token', { kind: 'token', token: this.o.personalToken }, this.o.personalUsername ?? null);
+  private useToken() {
+    const token = this.savedToken ?? this.o.personalToken;
+    if (token) {
+      this.use('token', { kind: 'token', token }, this.savedToken ? null : this.o.personalUsername ?? null);
     } else {
       this.use(null, undefined, null);
     }
@@ -75,26 +95,38 @@ export class DiscogsConnection {
   async begin(callbackUrl: string): Promise<string> {
     if (!this.o.consumer) throw new Error('App is not registered with Discogs: set DISCOGS_CONSUMER_KEY and DISCOGS_CONSUMER_SECRET.');
     const req = await getRequestToken(this.o.consumer, callbackUrl, this.o.userAgent, this.o.fetch);
-    this.pending.add(req);
+    await this.pending.add(req);
     return authorizeUrl(req.token);
   }
 
   /** Step 2: the user is back from discogs.com; swap the request token for an access token. */
   async finish(requestToken: string, verifier: string): Promise<string> {
     if (!this.o.consumer) throw new Error('App is not registered with Discogs.');
-    const req = this.pending.take(requestToken);
+    const req = await this.pending.take(requestToken);
     if (!req) throw new Error('This sign-in link has expired or was already used. Please try connecting again.');
     const access = await getAccessToken(this.o.consumer, req, verifier, this.o.userAgent, this.o.fetch);
     const auth: DiscogsAuth = { kind: 'oauth', consumer: this.o.consumer, access };
     const username = await this.o.identify(auth);
-    this.o.store.save({ ...access, username, connectedAt: new Date().toISOString() });
+    await this.saved.save({ ...access, username, connectedAt: new Date().toISOString() });
     this.use('oauth', auth, username);
     return username;
   }
 
-  /** Forget the connected account. Falls back to the .env token if there is one. */
-  disconnect() {
-    this.o.store.clear();
-    this.usePersonalToken();
+  /** Use a personal token entered in the app. Checks it with Discogs before saving. */
+  async useTokenFromUser(token: string): Promise<string> {
+    const t = token.trim();
+    const username = await this.o.identify({ kind: 'token', token: t });
+    await this.o.store.set(TOKEN_KEY, t);
+    this.savedToken = t;
+    this.use('token', { kind: 'token', token: t }, username);
+    return username;
+  }
+
+  /** Forget the connected account and any token saved in the app. Falls back to a configured token. */
+  async disconnect() {
+    await this.saved.clear();
+    await this.o.store.remove(TOKEN_KEY);
+    this.savedToken = null;
+    this.useToken();
   }
 }

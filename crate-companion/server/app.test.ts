@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from './app';
-import { MockDiscogs } from './discogs/mock';
+import { CrateCore } from '../core/crate';
+import { MockDiscogs } from '../core/discogs/mock';
 
 describe('app routes for the redesign', () => {
-  const app = createApp(new MockDiscogs());
+  const app = createApp(CrateCore.fromApi(new MockDiscogs()));
 
   it('only passes through Discogs images', async () => {
     expect((await app.request('/api/img?u=' + encodeURIComponent('https://example.com/a.jpg'))).status).toBe(400);

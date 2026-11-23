@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+**Groundwork for standalone apps.**
+
+- New `core/`: everything the server did (Discogs client, rate limiting, caching, sign-in,
+  background jobs, seller match, recommendations) with no PC-only code, so it can run inside
+  the Android and desktop apps. The server is now a thin layer over it.
+- Local mode: the web app can run the core itself with no server (`?local=1`), signing in with
+  a personal token or using demo data. Pending sign-ins survive a reload.
+- Sign in with a personal token from inside the app (checked with Discogs, kept on the device).
+- An existing saved sign-in keeps working after the update.
+
 **New look and two new screens.**
 
 - "Listening Room" design across the app: a dim room tinted from the record in focus (colour

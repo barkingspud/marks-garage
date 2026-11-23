@@ -29,6 +29,8 @@ export interface SearchParams {
 /** Everything the app needs from Discogs. Implemented by the real client and the mock. */
 export interface DiscogsApi {
   readonly isMock: boolean;
+  /** Fetch a cover image's bytes (to read its colours), or null if unavailable. */
+  image(url: string): Promise<{ body: ArrayBuffer; type: string } | null>;
   requestsInWindow(): number;
   identity(): Promise<Identity>;
   profile(username: string): Promise<UserProfile>;

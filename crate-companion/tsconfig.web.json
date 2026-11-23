@@ -6,5 +6,6 @@
     "types": ["vite/client"],
     "tsBuildInfoFile": "node_modules/.tmp/web.tsbuildinfo"
   },
-  "include": ["web/src", "shared"]
+  "include": ["web/src", "core", "shared"],
+  "exclude": ["**/*.test.ts", "**/test-helpers.ts"]
 }

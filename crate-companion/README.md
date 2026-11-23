@@ -86,17 +86,27 @@ DISCOGS_ENV_FILE="/path/to/.env" npm run dev
 ## How it works
 
 ```
-web/      React + Vite UI (works as an installable PWA; wraps for Android and iOS with Capacitor later)
-server/   Hono API server: holds the token, rate-limits and caches calls to Discogs
-shared/   Pure logic used by both: condition grades, seller-match scoring, recommendation scoring
+core/     Everything the app does: Discogs client (rate limit, cache, retries), sign-in,
+          background jobs, seller match and recommendations. No PC-only code, so it runs
+          in Node (the web version's server) and inside the Android and desktop apps.
+server/   Hono server for the web version: the core over HTTP, plus file storage.
+web/      React + Vite UI. Talks to the server, or runs the core itself ("local mode").
+shared/   Pure logic and types: condition grades, seller-match scoring, recommendation scoring.
 ```
 
-The browser never sees your token. Every Discogs call goes through `server/`, which:
+The core:
 
-- stays under Discogs' **60 requests/minute** limit (sliding window plus the
-  `X-Discogs-Ratelimit-Remaining` header) and retries on 429;
+- stays under Discogs' **60 requests/minute** limit and retries on 429;
 - caches GET responses (collection 5 min, inventories 2 h, artist/label/search 24 h);
-- runs long scans (seller inventories, recommendations) as background jobs that the UI polls for progress.
+- runs long scans (seller inventories, recommendations) as background jobs with progress.
+
+**Local mode** (no server). The installed apps always run this way. To try it in a browser,
+open the app with `?local=1` (`?local=0` switches back). You can sign in with a personal
+token, or look around with demo data. Discogs only lets browsers *read*, so in a plain
+browser, actions that change your Discogs data (wantlist, adding to the collection) and
+finishing "Connect with Discogs" need the apps' native network bridge (`window.crateNative`).
+App builds read the Discogs app registration from `VITE_DISCOGS_CONSUMER_KEY` and
+`VITE_DISCOGS_CONSUMER_SECRET`.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the roadmap, the Discogs API limits that shaped the
 design, and the Android and iOS plan.

@@ -120,6 +120,7 @@ const delay = () => new Promise((res) => setTimeout(res, 40));
 
 export class MockDiscogs implements DiscogsApi {
   readonly isMock = true;
+  async image() { return null; }
   requestsInWindow() { return 0; }
   async identity() { return { id: 1, username: USERNAME, resource_url: '' }; }
   async profile(username: string) {

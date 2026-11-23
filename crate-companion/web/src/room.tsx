@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { imageUrl } from './components/Cover';
+import { api } from './api';
 
 /**
  * The "room": every screen is a dim room tinted by the record in focus.
@@ -46,11 +46,9 @@ const cache = new Map<string, Promise<Hsl | null>>();
 
 /** The cover's main colour, favouring saturated pixels over greys. */
 export function dominantColor(src: string): Promise<Hsl | null> {
-  const url = imageUrl(src);
-  if (!url) return Promise.resolve(null);
-  let p = cache.get(url);
+  let p = cache.get(src);
   if (!p) {
-    p = new Promise((resolve) => {
+    p = api.coverPixelsUrl(src).then((url) => (!url ? null : new Promise<Hsl | null>((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
@@ -77,8 +75,8 @@ export function dominantColor(src: string): Promise<Hsl | null> {
       };
       img.onerror = () => resolve(null);
       img.src = url;
-    });
-    cache.set(url, p);
+    })));
+    cache.set(src, p);
   }
   return p;
 }

@@ -28,7 +28,27 @@ export class DiscogsClient implements DiscogsApi {
   private limiter = new RateLimiter();
   private cache = new TtlCache<unknown>();
 
-  constructor(private opts: { userAgent: string; auth?: DiscogsAuth }) {}
+  /**
+   * `fetch` is the network function to use. The default is the platform's own; the phone and
+   * desktop apps pass a native one, because Discogs only lets browsers read, not write.
+   */
+  constructor(private opts: { userAgent: string; auth?: DiscogsAuth; fetch?: typeof fetch }) {}
+
+  private get http(): typeof fetch {
+    return this.opts.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
+  }
+
+  /** Fetch an image (Discogs covers), for reading its colours. */
+  async image(url: string): Promise<{ body: ArrayBuffer; type: string } | null> {
+    try {
+      const res = await this.http(url, { headers: { 'User-Agent': this.opts.userAgent } });
+      const type = res.headers.get('content-type') ?? '';
+      if (!res.ok || !type.startsWith('image/')) return null;
+      return { body: await res.arrayBuffer(), type };
+    } catch {
+      return null;
+    }
+  }
 
   /** Switch accounts. Cached responses belong to the previous account, so drop them. */
   setAuth(auth: DiscogsAuth | undefined) {
@@ -39,7 +59,7 @@ export class DiscogsClient implements DiscogsApi {
   /** Who these credentials belong to (doesn't change the client's own credentials). */
   async identify(auth: DiscogsAuth): Promise<string> {
     await this.limiter.acquire();
-    const res = await fetch(`${BASE}/oauth/identity`, {
+    const res = await this.http(`${BASE}/oauth/identity`, {
       headers: { 'User-Agent': this.opts.userAgent, Authorization: authorizationHeader(auth) },
     });
     this.limiter.update(res.headers.get('X-Discogs-Ratelimit-Remaining'));
@@ -75,7 +95,7 @@ export class DiscogsClient implements DiscogsApi {
       await this.limiter.acquire();
       // Re-sign each attempt: OAuth headers carry a one-time nonce and timestamp.
       if (this.opts.auth) headers.Authorization = authorizationHeader(this.opts.auth);
-      const res = await fetch(key, { method, headers });
+      const res = await this.http(key, { method, headers });
       this.limiter.update(res.headers.get('X-Discogs-Ratelimit-Remaining'));
 
       if (res.status === 429 && attempt < 3) {
