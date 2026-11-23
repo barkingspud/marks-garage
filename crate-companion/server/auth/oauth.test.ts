@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { createApp } from '../app';
+import { createApp, publicOrigin } from '../app';
 import { MockDiscogs } from '../discogs/mock';
 import { authorizationHeader, type DiscogsAuth } from '../discogs/client';
 import { DiscogsConnection } from './connection';
@@ -122,5 +122,12 @@ describe('auth routes', () => {
 
     const off = await app.request('http://localhost:5173/api/auth/disconnect', { method: 'POST' });
     expect(await off.json()).toMatchObject({ method: null });
+  });
+});
+
+describe('publicOrigin', () => {
+  it('uses the web app address passed on by the dev proxy', () => {
+    expect(publicOrigin('http://localhost:8787/api/auth/connect', 'localhost:5173', 'http')).toBe('http://localhost:5173');
+    expect(publicOrigin('http://localhost:8787/api/auth/connect')).toBe('http://localhost:8787');
   });
 });

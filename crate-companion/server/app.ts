@@ -7,6 +7,19 @@ import { DiscogsError } from './discogs/client';
 import { getJob, startJob } from './lib/jobs';
 import { buildRecommendations, fetchCollection, fetchWants, runSellerMatch } from './services';
 
+/**
+ * The address the browser used to reach us. In development the web app (port 5173) proxies
+ * /api to this server (port 8787) and passes its own address as X-Forwarded-Host; Discogs must
+ * send the user back there, because port 8787 serves no pages in development.
+ */
+export function publicOrigin(requestUrl: string, forwardedHost?: string, forwardedProto?: string): string {
+  const url = new URL(requestUrl);
+  const host = forwardedHost?.split(',')[0]?.trim();
+  if (!host) return url.origin;
+  const proto = forwardedProto?.split(',')[0]?.trim() || url.protocol.replace(':', '');
+  return `${proto}://${host}`;
+}
+
 export function createApp(api: DiscogsApi, opts: { connection?: DiscogsConnection } = {}) {
   const app = new Hono().basePath('/api');
   const conn = opts.connection;
@@ -42,7 +55,7 @@ export function createApp(api: DiscogsApi, opts: { connection?: DiscogsConnectio
   app.get('/auth/connect', async (c) => {
     if (!conn) return c.redirect('/');
     try {
-      const callback = new URL('/api/auth/callback', c.req.url).toString();
+      const callback = `${publicOrigin(c.req.url, c.req.header('x-forwarded-host'), c.req.header('x-forwarded-proto'))}/api/auth/callback`;
       return c.redirect(await conn.begin(callback));
     } catch (e) {
       console.error(e);
