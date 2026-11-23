@@ -64,3 +64,15 @@ describe('buyerPrice (seller currency vs. buyer currency)', () => {
     expect(scoreListing(eur, 13.27).reasons).toContain('near lowest price');
   });
 });
+
+describe('ships-from filter', () => {
+  it('defaults to United States', () => {
+    expect(rejectReasons(listing(), DEFAULT_CRITERIA)).toEqual([]);
+    expect(rejectReasons(listing({ ships_from: 'Germany' }), DEFAULT_CRITERIA)).toEqual(['ships from Germany']);
+  });
+  it('accepts abbreviations and any case, and an empty list means anywhere', () => {
+    expect(rejectReasons(listing(), { ...DEFAULT_CRITERIA, shipsFrom: ['usa'] })).toEqual([]);
+    expect(rejectReasons(listing({ ships_from: 'United Kingdom' }), { ...DEFAULT_CRITERIA, shipsFrom: ['US', 'UK'] })).toEqual([]);
+    expect(rejectReasons(listing({ ships_from: 'Germany' }), { ...DEFAULT_CRITERIA, shipsFrom: [] })).toEqual([]);
+  });
+});

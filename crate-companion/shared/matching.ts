@@ -12,7 +12,7 @@ export interface MatchCriteria {
   minSellerRatings: number;
   /** Max price in your marketplace currency (see `buyerPrice`); null = no limit. */
   maxPrice: number | null;
-  /** If non-empty, listing.ships_from must be one of these. */
+  /** If non-empty, listing.ships_from must be one of these (case-insensitive; "US", "UK" etc. accepted). */
   shipsFrom: string[];
 }
 
@@ -23,8 +23,27 @@ export const DEFAULT_CRITERIA: MatchCriteria = {
   minSellerRating: 98,
   minSellerRatings: 25,
   maxPrice: null,
-  shipsFrom: [],
+  shipsFrom: ['United States'],
 };
+
+// Discogs `ships_from` uses full country names ("United States", "United Kingdom").
+const COUNTRY_ALIASES: Record<string, string> = {
+  us: 'united states', usa: 'united states', 'u.s.': 'united states', 'u.s.a.': 'united states',
+  america: 'united states', 'united states of america': 'united states',
+  uk: 'united kingdom', 'u.k.': 'united kingdom', gb: 'united kingdom', 'great britain': 'united kingdom',
+  britain: 'united kingdom', england: 'united kingdom',
+};
+
+export function normalizeCountry(name: string): string {
+  const k = name.trim().toLowerCase();
+  return COUNTRY_ALIASES[k] ?? k;
+}
+
+export function shipsFromAllowed(l: Listing, allowed: string[]): boolean {
+  if (!allowed.length) return true;
+  const from = normalizeCountry(l.ships_from ?? '');
+  return allowed.some((c) => normalizeCountry(c) === from);
+}
 
 export interface ScoredListing {
   listing: Listing;
@@ -66,7 +85,7 @@ export function rejectReasons(l: Listing, c: MatchCriteria): string[] {
   if (total < c.minSellerRatings) out.push(`seller has ${total} ratings (< ${c.minSellerRatings})`);
   const price = buyerPrice(l).value;
   if (c.maxPrice !== null && price > c.maxPrice) out.push(`price ${price} > ${c.maxPrice}`);
-  if (c.shipsFrom.length && !c.shipsFrom.includes(l.ships_from ?? '')) out.push(`ships from ${l.ships_from}`);
+  if (!shipsFromAllowed(l, c.shipsFrom)) out.push(`ships from ${l.ships_from || 'unknown'}`);
   return out;
 }
 

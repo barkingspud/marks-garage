@@ -12,6 +12,8 @@ interface Saved { sellers: string[]; criteria: MatchCriteria; maxPages: number }
 export function Match() {
   const [cfg, setCfg] = useState<Saved>(() => load('match', { sellers: [], criteria: DEFAULT_CRITERIA, maxPages: 10 }));
   const [newSeller, setNewSeller] = useState('');
+  // Keep the raw text so commas can be typed; the parsed list goes into the criteria.
+  const [shipsText, setShipsText] = useState(() => cfg.criteria.shipsFrom.join(', '));
   const { job, error, running, start } = useJob<MatchResult>('match');
 
   const update = (patch: Partial<Saved>) => setCfg((c) => { const n = { ...c, ...patch }; save('match', n); return n; });
@@ -70,8 +72,8 @@ export function Match() {
             <label className="field">Max price (your currency)
               <input type="number" min={0} placeholder="no limit" value={cfg.criteria.maxPrice ?? ''} onChange={(e) => setCrit({ maxPrice: e.target.value ? Number(e.target.value) : null })} />
             </label>
-            <label className="field">Ships from <span className="muted small">(comma-separated)</span>
-              <input placeholder="any" value={cfg.criteria.shipsFrom.join(', ')} onChange={(e) => setCrit({ shipsFrom: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
+            <label className="field">Ships from <span className="muted small">(comma-separated, e.g. US, Canada; blank = anywhere)</span>
+              <input placeholder="anywhere" value={shipsText} onChange={(e) => { setShipsText(e.target.value); setCrit({ shipsFrom: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) }); }} />
             </label>
           </div>
           <label className="check">

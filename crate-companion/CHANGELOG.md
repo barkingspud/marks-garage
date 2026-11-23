@@ -10,6 +10,8 @@ Field mappings checked against the live Discogs API.
 - Taste profile counts each label once per release, even when it's listed for each catalog number.
 - Recommendations from style searches drop Discogs' " (2)" artist suffixes and stray spaces,
   and label picks use community want/have counts.
+- Seller match ships-from filter now defaults to the United States, ignores case, accepts
+  abbreviations like "US"/"USA"/"UK", and lets you type commas to list several countries.
 - Types updated: `curr_abbr` on profiles, collection custom-field `notes`, listing `original_price`.
 
 ## 0.1.0 (2026-11-23)
