@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
-    "dev:server": "tsx watch server/index.ts",
+    "dev:server": "tsx server/index.ts",
+    "dev:server:watch": "tsx watch server/index.ts",
     "dev:web": "vite",
     "mock": "cross-env DISCOGS_MOCK=1 npm run dev",
+    "dev:watch": "concurrently -k -n api,web -c blue,magenta \"npm:dev:server:watch\" \"npm:dev:web\"",
     "build": "tsc -b && vite build",
     "start": "cross-env NODE_ENV=production tsx server/index.ts",
     "typecheck": "tsc -b",
