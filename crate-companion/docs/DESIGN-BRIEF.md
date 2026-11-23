@@ -49,7 +49,7 @@ A personal overview:
 
 ### 3. Collection
 Every record the user owns. Can be several hundred to several thousand records.
-- Search across artist, title, label and catalogue number.
+- Search across artist, title, label and catalog number.
 - Filter by Discogs folder and by style (e.g. Hard Rock, Pop Rock, Prog Rock).
 - Sort by recently added, artist, title, year, or the user's own rating.
 - Opening a record leads to its Discogs page (a record detail screen inside the app is
@@ -112,7 +112,7 @@ and the app scans those sellers' shop inventories for anything on the wantlist.
 
 | Thing | Fields |
 |---|---|
-| Record (collection or wantlist item) | title, artists, year, labels with catalogue numbers, formats (e.g. Vinyl, LP, Album, Reissue), genres, styles, thumbnail (150px), cover image (up to 600px), date added, user's rating 0–5, Discogs release and master IDs |
+| Record (collection or wantlist item) | title, artists, year, labels with catalog numbers, formats (e.g. Vinyl, LP, Album, Reissue), genres, styles, thumbnail (150px), cover image (up to 600px), date added, user's rating 0–5, Discogs release and master IDs |
 | User's own grades | collection custom fields, usually record grade and sleeve grade (e.g. "Near Mint (NM or M-)", "Very Good Plus (VG+)") |
 | Marketplace stats | copies for sale, lowest price (in the user's currency) |
 | Listing (seller match) | record grade, sleeve grade, price (seller's currency and converted), ships from, seller username, rating %, number of ratings, accepts offers, comments, date listed |
@@ -203,13 +203,13 @@ record spines, and this one), the owner chose **Listening Room** and wants it re
 something spectacular.
 
 - **Idea:** immersive and calm, like the room changing when you put a record on. Each
-  screen takes its colour from the record in focus. A deep, desaturated version of the
-  cover's main colour fills the background, with a soft pool of light behind the cover.
+  screen takes its color from the record in focus. A deep, desaturated version of the
+  cover's main color fills the background, with a soft pool of light behind the cover.
   Cover art is the hero.
 - **Signature moment:** the latest or selected record sits half out of its sleeve and
-  slowly turns, with the label coloured by the record's accent. The spin stops when the
+  slowly turns, with the label colored by the record's accent. The spin stops when the
   user prefers reduced motion.
-- **Colour, example room** (*Brothers In Arms*):
+- **Color, example room** (*Brothers In Arms*):
   - background `#10273A` (deep steel blue)
   - text `#EAF1F6`
   - secondary text `#B7C8D6`
@@ -229,15 +229,15 @@ something spectacular.
 
 ### Already tried and rejected
 - **Generic default:** warm cream background, terracotta accent, everything in identical
-  rounded white cards with soft grey shadows.
-- **Safe reskin:** a cool grey and blue palette with a plain cover grid. It worked, but
+  rounded white cards with soft gray shadows.
+- **Safe reskin:** a cool gray and blue palette with a plain cover grid. It worked, but
   the owner rated it "mid-level design at best".
 - **Things to avoid:**
   - dashboard stat-card rows;
   - gradient washes as decoration;
   - all-caps labels above every heading;
   - emoji as icons;
-  - a different accent colour on every element.
+  - a different accent color on every element.
 
 ## What to ask for
 
@@ -247,7 +247,7 @@ Pick one and add it after the brief.
    Discover in the Listening Room direction, 390×844. Use the real example content above."
 2. "Push the Listening Room direction further. Give me three variations of the Home and
    Record detail screens, from restrained to bold, and explain what each one changes."
-3. "Design a Record detail screen that works for both owned records (grades, catalogue
+3. "Design a Record detail screen that works for both owned records (grades, catalog
    number, date added) and wanted records (copies for sale, lowest price, matching
    listings)."
 4. "Design the Sellers results screen: per-seller summary plus ranked listings with grade,

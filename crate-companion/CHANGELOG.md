@@ -2,24 +2,34 @@
 
 ## Unreleased
 
+**Groundwork for standalone apps.**
+
+- New `core/`: everything the server did (Discogs client, rate limiting, caching, sign-in,
+  background jobs, seller match, recommendations) with no PC-only code, so it can run inside
+  the Android and desktop apps. The server is now a thin layer over it.
+- Local mode: the web app can run the core itself with no server (`?local=1`), signing in with
+  a personal token or using demo data. Pending sign-ins survive a reload.
+- Sign in with a personal token from inside the app (checked with Discogs, kept on the device).
+- An existing saved sign-in keeps working after the update.
+
 **New look and two new screens.**
 
-- "Listening Room" design across the app: a dim room tinted from the record in focus (colour
+- "Listening Room" design across the app: a dim room tinted from the record in focus (color
   read from the real cover), frosted-glass controls, artwork in lifted square cards, grain,
   amber only for prices, scores and the main action. Bricolage Grotesque, bundled.
 - Glass sidebar on desktop; floating tab bar on phones.
 - Home: the latest record's cover in front with its record sliding out and turning.
 - Collection: cover grid or list, style chips, and a side panel for the selected record on wide screens.
-- Record detail (new): your record and sleeve grades from your collection fields, catalogue
+- Record detail (new): your record and sleeve grades from your collection fields, catalog
   details, styles; for wanted records, the current lowest price and listing count.
-- Record Check (new): search by text, catalogue number or barcode (camera scanning where
+- Record Check (new): search by text, catalog number or barcode (camera scanning where
   supported), pick the exact pressing, see owned/wanted status, compare a shop's price with the
   cheapest Discogs listing, and "I bought it" to add it to your collection.
 - Wantlist: cover grid with frosted price tags and per-record Check price.
 - Sellers: setup, a turning-record progress ring while scanning, and ranked results with grade
   chips, big scores, seller trust and price with shipping where available.
 - Discover: top pick with a score ring and reasons, then more picks with one-tap add.
-- Server: cover image pass-through (Discogs images only) so the app can read colours; collection
+- Server: cover image pass-through (Discogs images only) so the app can read colors; collection
   custom fields; release search; add to collection.
 
 Field mappings checked against the live Discogs API.
@@ -45,11 +55,11 @@ Field mappings checked against the live Discogs API.
   Home page and in the sidebar. A personal `DISCOGS_TOKEN` still works as a fallback.
 - **New look**: cover art first. Collection and wantlist are cover grids (a compact list on
   phones); Home opens on your latest records, overlapping like a record-shop bin; prices sit on
-  yellow price stickers. Cool grey and divider-blue palette with a dark theme, one bundled
+  yellow price stickers. Cool gray and divider-blue palette with a dark theme, one bundled
   typeface (Archivo, condensed for titles). Covers that fail to load fall back to a drawn label.
 - Accessibility and touch: text meets WCAG AA contrast in both themes, 48px touch targets on
   touch screens, visible keyboard focus, reduced-motion support, empty-state messages, and
-  labelled remove buttons.
+  labeled remove buttons.
 - Types updated: `curr_abbr` on profiles, collection custom-field `notes`, listing `original_price`.
 
 ## 0.1.0 (2026-11-23)

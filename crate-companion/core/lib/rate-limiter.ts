@@ -3,7 +3,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /**
  * Discogs allows 60 authenticated requests per moving 60-second window.
  * We keep a sliding window of our own request times (with headroom) and also
- * honour the X-Discogs-Ratelimit-Remaining header the server sends back.
+ * honor the X-Discogs-Ratelimit-Remaining header the server sends back.
  */
 export class RateLimiter {
   private stamps: number[] = [];

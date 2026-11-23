@@ -13,7 +13,7 @@ export interface SearchParams {
   year?: string;     // "1995" or "1990-1999"
   format?: string;
   country?: string;
-  /** Catalogue number and barcode (Record Check). */
+  /** Catalog number and barcode (Record Check). */
   catno?: string;
   barcode?: string;
   /** Artist name (fuzzy match; Discogs ignores the " (2)" suffix form). */
@@ -29,6 +29,8 @@ export interface SearchParams {
 /** Everything the app needs from Discogs. Implemented by the real client and the mock. */
 export interface DiscogsApi {
   readonly isMock: boolean;
+  /** Fetch a cover image's bytes (to read its colors), or null if unavailable. */
+  image(url: string): Promise<{ body: ArrayBuffer; type: string } | null>;
   requestsInWindow(): number;
   identity(): Promise<Identity>;
   profile(username: string): Promise<UserProfile>;

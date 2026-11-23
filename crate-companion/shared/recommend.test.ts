@@ -45,7 +45,7 @@ describe('rankCandidates', () => {
     expect(out[0]!.releaseId).toBe(60);
     expect(out[0]!.sources).toEqual(['by artist', 'in style']);
   });
-  it('ranks favourite artist + style above unrelated', () => {
+  it('ranks favorite artist + style above unrelated', () => {
     const out = rankCandidates([
       { releaseId: 70, title: 'unrelated', artist: '', styles: ['Polka'], sources: [] },
       { releaseId: 71, title: 'fav', artist: '', artistId: 10, styles: ['Techno'], year: 1997, sources: [] },

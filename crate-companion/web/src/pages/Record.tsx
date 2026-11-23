@@ -6,7 +6,7 @@ import { Empty, ErrorBox, GradeMeter, Loading, artistLine, discogsUrl, formatLin
 import { myGrades } from '../grades';
 import { useRoom } from '../room';
 
-/** One record: yours (grades, catalogue details) or wanted (what it costs right now). */
+/** One record: yours (grades, catalog details) or wanted (what it costs right now). */
 export function Record() {
   const id = Number(useParams().releaseId);
   const navigate = useNavigate();
@@ -90,7 +90,7 @@ export function Record() {
 
           <dl className="facts">
             {label && <div><dt>Label</dt><dd>{label.name}</dd></div>}
-            {label?.catno && <div><dt>Catalogue no.</dt><dd>{label.catno}</dd></div>}
+            {label?.catno && <div><dt>Catalog no.</dt><dd>{label.catno}</dd></div>}
             <div><dt>Format</dt><dd>{formatLine(b)}</dd></div>
             {b.year > 0 && <div><dt>Released</dt><dd>{b.year}</dd></div>}
           </dl>

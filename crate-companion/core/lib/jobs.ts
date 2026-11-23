@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 /**
  * Long-running work (scanning seller inventories, building recommendations)
  * can take minutes under the 60 req/min limit, so it runs as a background job
@@ -22,7 +20,7 @@ const jobs = new Map<string, Job>();
 
 export function startJob<T>(kind: string, work: (progress: ProgressFn) => Promise<T>): Job<T> {
   const job: Job<T> = {
-    id: randomUUID(),
+    id: globalThis.crypto.randomUUID(),
     kind,
     status: 'running',
     progress: { done: 0, total: 0, message: 'Starting…' },

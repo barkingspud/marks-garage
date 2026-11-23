@@ -62,7 +62,7 @@ export function Check() {
       <form className="toolbar" onSubmit={(e) => { e.preventDefault(); submit(); }} role="search">
         <label className="field-glass">
           <svg viewBox="0 0 24 24" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></svg>
-          <span className="sr-only">Artist and title, catalogue number or barcode</span>
+          <span className="sr-only">Artist and title, catalog number or barcode</span>
           <input type="search" inputMode="search" placeholder="Artist and title, cat# or barcode" value={text} onChange={(e) => setText(e.target.value)} />
         </label>
         <button type="button" className="btn icon" aria-label="Scan barcode" onClick={() => setScanning(true)}>
@@ -74,7 +74,7 @@ export function Check() {
 
       {search.isFetching && <Loading label="Searching Discogs…" />}
       <ErrorBox error={search.error} />
-      {search.data && !search.data.results.length && <Empty title="No releases found">Try the catalogue number from the spine or label, or the barcode digits.</Empty>}
+      {search.data && !search.data.results.length && <Empty title="No releases found">Try the catalog number from the spine or label, or the barcode digits.</Empty>}
 
       {pick && head && (
         <>
@@ -104,7 +104,7 @@ export function Check() {
               </label>
             ))}
             <p className="sub small" style={{ marginTop: 10 }}>
-              {search.data!.total > 6 ? `${search.data!.total} releases match. ` : ''}Many pressings share a catalogue number: compare the runout etched near the label.
+              {search.data!.total > 6 ? `${search.data!.total} releases match. ` : ''}Many pressings share a catalog number: compare the runout etched near the label.
             </p>
           </fieldset>
 

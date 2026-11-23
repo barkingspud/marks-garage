@@ -7,8 +7,8 @@ A web app (Android and iOS apps to follow) for record collectors, built on the
 - **Collection**: browse every folder as a cover grid or list, search by artist/title/label/cat#,
   and filter by style. On wide screens the selected record opens in a side panel.
 - **Record detail**: your grades (from your Discogs collection fields) on the scale from Poor
-  to Mint, catalogue details, or, for wanted records, the current lowest price.
-- **Record Check**: in a shop, find the exact pressing by text, catalogue number or barcode
+  to Mint, catalog details, or, for wanted records, the current lowest price.
+- **Record Check**: in a shop, find the exact pressing by text, catalog number or barcode
   (camera scanning where the browser supports it), see whether you own or want it, compare the
   asking price with Discogs listings, and add it to your collection when you buy it.
 - **Wantlist**: view it, remove items, and check how many copies are for sale and the lowest price.
@@ -18,7 +18,7 @@ A web app (Android and iOS apps to follow) for record collectors, built on the
 - **Discover**: recommendations built from the artists, labels, styles and decades you collect,
   each with the reason it was picked. One click adds a pick to your wantlist.
 
-The look ("Listening Room"): each screen is a dim room tinted by the colours of the record in
+The look ("Listening Room"): each screen is a dim room tinted by the colors of the record in
 focus, with frosted-glass controls and artwork in lifted cards. Glass sidebar on desktop,
 floating tab bar on phones.
 
@@ -86,17 +86,27 @@ DISCOGS_ENV_FILE="/path/to/.env" npm run dev
 ## How it works
 
 ```
-web/      React + Vite UI (works as an installable PWA; wraps for Android and iOS with Capacitor later)
-server/   Hono API server: holds the token, rate-limits and caches calls to Discogs
-shared/   Pure logic used by both: condition grades, seller-match scoring, recommendation scoring
+core/     Everything the app does: Discogs client (rate limit, cache, retries), sign-in,
+          background jobs, seller match and recommendations. No PC-only code, so it runs
+          in Node (the web version's server) and inside the Android and desktop apps.
+server/   Hono server for the web version: the core over HTTP, plus file storage.
+web/      React + Vite UI. Talks to the server, or runs the core itself ("local mode").
+shared/   Pure logic and types: condition grades, seller-match scoring, recommendation scoring.
 ```
 
-The browser never sees your token. Every Discogs call goes through `server/`, which:
+The core:
 
-- stays under Discogs' **60 requests/minute** limit (sliding window plus the
-  `X-Discogs-Ratelimit-Remaining` header) and retries on 429;
+- stays under Discogs' **60 requests/minute** limit and retries on 429;
 - caches GET responses (collection 5 min, inventories 2 h, artist/label/search 24 h);
-- runs long scans (seller inventories, recommendations) as background jobs that the UI polls for progress.
+- runs long scans (seller inventories, recommendations) as background jobs with progress.
+
+**Local mode** (no server). The installed apps always run this way. To try it in a browser,
+open the app with `?local=1` (`?local=0` switches back). You can sign in with a personal
+token, or look around with demo data. Discogs only lets browsers *read*, so in a plain
+browser, actions that change your Discogs data (wantlist, adding to the collection) and
+finishing "Connect with Discogs" need the apps' native network bridge (`window.crateNative`).
+App builds read the Discogs app registration from `VITE_DISCOGS_CONSUMER_KEY` and
+`VITE_DISCOGS_CONSUMER_SECRET`.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the roadmap, the Discogs API limits that shaped the
 design, and the Android and iOS plan.

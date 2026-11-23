@@ -66,7 +66,7 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
 - [ ] Saved seller lists. Suggest sellers from your Discogs order history (`/marketplace/orders`).
 - [ ] Multiple accounts ("collections") and collection custom fields (e.g. media condition you own).
 - [x] Record detail screen, with your grades from collection custom fields.
-- [x] Record Check: find a pressing by text, catalogue number or barcode; owned/wanted status;
+- [x] Record Check: find a pressing by text, catalog number or barcode; owned/wanted status;
       price comparison; add to collection.
 - [ ] Collection stats page (by decade, style, format, value).
 
@@ -78,7 +78,17 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
 - [ ] Deploy the server (e.g. Fly.io, Render or Cloudflare Workers) behind HTTPS.
 - [ ] Scheduled "new match" checks with notifications.
 
-### Phase 4: Android and iOS apps
+### Phase 4: standalone apps (public): Android and desktop first, iOS later
+- [x] Step 1: the shared core (`core/`). Everything the server did now runs anywhere, with
+      pluggable network and storage. The web app can run it directly ("local mode",
+      `?local=1`), so the apps need no server.
+- [ ] Step 2: Android app (Capacitor): native network bridge (Discogs blocks browser writes),
+      secure storage, "Connect with Discogs" via a custom-scheme callback, native barcode
+      scanner (ML Kit), keep the screen awake during scans, builds on GitHub Actions.
+- [ ] Step 3: Windows desktop app (Electron): same core with Node's fetch in the main process,
+      protocol-handler sign-in, installer and auto-updates via GitHub Releases.
+- [ ] Step 4: store readiness: Play listing, privacy policy page, data safety answers, icons.
+
 - [ ] Wrap `web/` with **Capacitor**, which builds both the Android and the iOS app from the
       same code. The UI is already built for it: bottom tab bar, safe-area insets (notch and
       home bar), 48px touch targets, no hover-only controls, 16px inputs (no iOS zoom on focus),

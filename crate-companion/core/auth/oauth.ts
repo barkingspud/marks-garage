@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import type { KeyValueStore } from './store';
 
 /**
  * Discogs OAuth 1.0a ("Connect with Discogs"), using the PLAINTEXT signature method,
@@ -11,6 +11,10 @@ import { randomBytes } from 'node:crypto';
  */
 
 const API = 'https://api.discogs.com';
+
+function randomHex(bytes: number) {
+  return [...globalThis.crypto.getRandomValues(new Uint8Array(bytes))].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 export const AUTHORIZE_URL = 'https://www.discogs.com/oauth/authorize';
 
 export interface Consumer { key: string; secret: string }
@@ -28,7 +32,7 @@ export function oauthHeader(
   token?: TokenPair,
   extra: Record<string, string> = {},
   now = Date.now(),
-  nonce = randomBytes(16).toString('hex'),
+  nonce = randomHex(16),
 ): string {
   const params: Record<string, string> = {
     oauth_consumer_key: consumer.key,
@@ -86,19 +90,31 @@ export async function getAccessToken(
   return { token, secret };
 }
 
-/** Request tokens waiting for the user to come back from discogs.com (in memory, 15 min). */
+/**
+ * Request tokens waiting for the user to come back from discogs.com (15 min).
+ * Kept in the key-value store, so a sign-in survives the app or page reloading
+ * while the user is on discogs.com.
+ */
 export class PendingRequests {
-  private map = new Map<string, { secret: string; expires: number }>();
-  constructor(private ttlMs = 15 * 60_000) {}
-  add(t: TokenPair) {
+  constructor(private store: KeyValueStore, private ttlMs = 15 * 60_000) {}
+  private async read(): Promise<Record<string, { secret: string; expires: number }>> {
+    try { return JSON.parse((await this.store.get(PENDING_KEY)) ?? '{}'); } catch { return {}; }
+  }
+  async add(t: TokenPair) {
     const now = Date.now();
-    for (const [k, v] of this.map) if (v.expires < now) this.map.delete(k);
-    this.map.set(t.token, { secret: t.secret, expires: now + this.ttlMs });
+    const all = await this.read();
+    for (const [k, v] of Object.entries(all)) if (v.expires < now) delete all[k];
+    all[t.token] = { secret: t.secret, expires: now + this.ttlMs };
+    await this.store.set(PENDING_KEY, JSON.stringify(all));
   }
   /** Returns and forgets the pending request, or undefined if unknown/expired. */
-  take(token: string): TokenPair | undefined {
-    const hit = this.map.get(token);
-    this.map.delete(token);
+  async take(token: string): Promise<TokenPair | undefined> {
+    const all = await this.read();
+    const hit = all[token];
+    delete all[token];
+    await this.store.set(PENDING_KEY, JSON.stringify(all));
     return hit && hit.expires >= Date.now() ? { token, secret: hit.secret } : undefined;
   }
 }
+
+const PENDING_KEY = 'discogs-pending-requests';
