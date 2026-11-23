@@ -11,6 +11,7 @@ import { Home } from './pages/Home';
 import { Match } from './pages/Match';
 import { Setup } from './pages/Setup';
 import { Wantlist } from './pages/Wantlist';
+import '@fontsource-variable/archivo/wdth.css';
 import './styles.css';
 
 const queryClient = new QueryClient({

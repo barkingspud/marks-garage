@@ -23,6 +23,13 @@ Field mappings checked against the live Discogs API.
   pasting a token into `.env`. Needs the app registered once with Discogs
   (`DISCOGS_CONSUMER_KEY`/`SECRET`). The connection survives restarts, and Disconnect is on the
   Home page and in the sidebar. A personal `DISCOGS_TOKEN` still works as a fallback.
+- **New look**: cover art first. Collection and wantlist are cover grids (a compact list on
+  phones); Home opens on your latest records, overlapping like a record-shop bin; prices sit on
+  yellow price stickers. Cool grey and divider-blue palette with a dark theme, one bundled
+  typeface (Archivo, condensed for titles). Covers that fail to load fall back to a drawn label.
+- Accessibility and touch: text meets WCAG AA contrast in both themes, 48px touch targets on
+  touch screens, visible keyboard focus, reduced-motion support, empty-state messages, and
+  labelled remove buttons.
 - Types updated: `curr_abbr` on profiles, collection custom-field `notes`, listing `original_price`.
 
 ## 0.1.0 (2026-11-23)

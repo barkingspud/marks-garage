@@ -41,6 +41,36 @@ export function Progress({ done, total, message }: { done: number; total: number
   );
 }
 
+/** "$50.60", "€12.08"; whole amounts from 100 up so they fit the sticker. */
+export function money(value: number, currency: string) {
+  const big = value >= 100;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency', currency, minimumFractionDigits: big ? 0 : 2, maximumFractionDigits: big ? 0 : 2,
+    }).format(value);
+  } catch {
+    return `${value.toFixed(big ? 0 : 2)} ${currency}`;
+  }
+}
+
+/** Round yellow price sticker, as from a shop's price gun. */
+export function Sticker({ value, currency, label }: { value: number; currency: string; label?: string }) {
+  return (
+    <span className="sticker">
+      <span>{label && <small>{label}</small>}{money(value, currency)}</span>
+    </span>
+  );
+}
+
+export function Empty({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <div className="card empty">
+      <h3>{title}</h3>
+      {children && <p className="muted">{children}</p>}
+    </div>
+  );
+}
+
 export function Score({ value }: { value: number }) {
   const tone = value >= 75 ? 'good' : value >= 55 ? 'ok' : 'low';
   return <span className={`score score-${tone}`} title="Match score (0–100)">{value}</span>;
