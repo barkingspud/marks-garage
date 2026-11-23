@@ -66,7 +66,7 @@ export function createApp(core: CrateCore) {
   app.get('/auth/callback', async (c) => {
     if (!core.connection) return c.redirect('/');
     // Discogs sends ?denied=<token> when the user clicks "Cancel".
-    if (c.req.query('denied')) return back(c, new Error('Connection cancelled on Discogs.'));
+    if (c.req.query('denied')) return back(c, new Error('Connection canceled on Discogs.'));
     const token = c.req.query('oauth_token');
     const verifier = c.req.query('oauth_verifier');
     if (!token || !verifier) return back(c, new Error('Discogs did not finish the sign-in.'));

@@ -4,7 +4,7 @@ import { api } from './api';
 /**
  * The "room": every screen is a dim room tinted by the record in focus.
  * A page calls useRoom(coverUrl) and the shell's background shifts to a deep,
- * desaturated version of that cover's main colour.
+ * desaturated version of that cover's main color.
  */
 
 type Hsl = { h: number; s: number; l: number };
@@ -44,7 +44,7 @@ export function useRoom(cover?: string | null, fallbackHue?: number) {
 
 const cache = new Map<string, Promise<Hsl | null>>();
 
-/** The cover's main colour, favouring saturated pixels over greys. */
+/** The cover's main color, favouring saturated pixels over grays. */
 export function dominantColor(src: string): Promise<Hsl | null> {
   let p = cache.get(src);
   if (!p) {

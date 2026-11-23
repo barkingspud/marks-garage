@@ -147,7 +147,7 @@ export const api = {
     if (L) return src;
     return src.startsWith('https://i.discogs.com/') ? `/api/img?u=${encodeURIComponent(src)}` : src;
   },
-  /** A same-origin URL for the cover, so its pixels can be read (for the room colour). */
+  /** A same-origin URL for the cover, so its pixels can be read (for the room color). */
   coverPixelsUrl: (src: string): Promise<string | null> => {
     if (!L) return Promise.resolve(api.coverUrl(src));
     let p = imageUrls.get(src);

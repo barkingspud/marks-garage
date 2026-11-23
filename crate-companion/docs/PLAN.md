@@ -66,7 +66,7 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
 - [ ] Saved seller lists. Suggest sellers from your Discogs order history (`/marketplace/orders`).
 - [ ] Multiple accounts ("collections") and collection custom fields (e.g. media condition you own).
 - [x] Record detail screen, with your grades from collection custom fields.
-- [x] Record Check: find a pressing by text, catalogue number or barcode; owned/wanted status;
+- [x] Record Check: find a pressing by text, catalog number or barcode; owned/wanted status;
       price comparison; add to collection.
 - [ ] Collection stats page (by decade, style, format, value).
 

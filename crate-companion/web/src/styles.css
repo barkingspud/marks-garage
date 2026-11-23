@@ -1,6 +1,6 @@
 /* Crate Companion: "Listening Room".
    Every screen is a dim room, lit from above and tinted by the record in focus (room.tsx sets
-   --room-0..3 from the cover's colour). Controls are frosted glass; artwork sits in lifted cards;
+   --room-0..3 from the cover's color). Controls are frosted glass; artwork sits in lifted cards;
    amber is only for prices, scores and the main action. One typeface: Bricolage Grotesque. */
 
 :root {

@@ -38,7 +38,7 @@ export class DiscogsClient implements DiscogsApi {
     return this.opts.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   }
 
-  /** Fetch an image (Discogs covers), for reading its colours. */
+  /** Fetch an image (Discogs covers), for reading its colors. */
   async image(url: string): Promise<{ body: ArrayBuffer; type: string } | null> {
     try {
       const res = await this.http(url, { headers: { 'User-Agent': this.opts.userAgent } });

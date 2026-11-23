@@ -34,7 +34,7 @@ function useConnectReturn() {
     if (!state.busy) return;
     const q = new URLSearchParams(window.location.search);
     const tidy = () => window.history.replaceState(null, '', window.location.pathname);
-    if (q.has('denied')) { tidy(); setState({ busy: false, error: 'Connection cancelled on Discogs.' }); return; }
+    if (q.has('denied')) { tidy(); setState({ busy: false, error: 'Connection canceled on Discogs.' }); return; }
     api.finishConnect(q.get('oauth_token') ?? '', q.get('oauth_verifier') ?? '')
       .then(() => { tidy(); setState({ busy: false, error: null }); void queryClient.invalidateQueries({ queryKey: ['status'] }); })
       .catch((e: Error) => { tidy(); setState({ busy: false, error: e.message }); });

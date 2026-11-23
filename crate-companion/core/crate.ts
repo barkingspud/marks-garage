@@ -112,12 +112,12 @@ export class CrateCore {
     return { ok: true };
   }
 
-  /** Record Check: find the exact pressing by text, catalogue number or barcode. */
+  /** Record Check: find the exact pressing by text, catalog number or barcode. */
   async searchReleases(p: { q?: string; barcode?: string; catno?: string }): Promise<{ total: number; results: SearchResult[] }> {
     const q = p.q?.trim();
     const barcode = p.barcode?.replace(/\D/g, '');
     const catno = p.catno?.trim();
-    if (!q && !barcode && !catno) throw new CrateError(400, 'Type an artist, title, catalogue number or barcode.');
+    if (!q && !barcode && !catno) throw new CrateError(400, 'Type an artist, title, catalog number or barcode.');
     await this.me();
     const r = await this.api.search({ q: barcode ? undefined : q, barcode: barcode || undefined, catno: catno || undefined, type: 'release', per_page: 25 });
     return { total: r.pagination.items, results: r.results };

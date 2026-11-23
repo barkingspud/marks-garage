@@ -17,8 +17,8 @@ describe('auth routes', () => {
     expect(start.status).toBe(302);
     expect(start.headers.get('location')).toBe('https://www.discogs.com/oauth/authorize?oauth_token=req1');
 
-    const cancelled = await app.request('http://localhost:5173/api/auth/callback?denied=req1');
-    expect(cancelled.headers.get('location')).toMatch(/^\/\?connect_error=Connection%20cancelled/);
+    const canceled = await app.request('http://localhost:5173/api/auth/callback?denied=req1');
+    expect(canceled.headers.get('location')).toMatch(/^\/\?connect_error=Connection%20canceled/);
 
     const back = await app.request('http://localhost:5173/api/auth/callback?oauth_token=req1&oauth_verifier=v1');
     expect(back.headers.get('location')).toBe('/');
