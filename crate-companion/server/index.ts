@@ -13,6 +13,7 @@ const core = await CrateCore.create({
   consumer: config.consumerKey && config.consumerSecret ? { key: config.consumerKey, secret: config.consumerSecret } : undefined,
   personalToken: config.token,
   personalUsername: config.username,
+  aiServer: config.aiServer,
 });
 
 const root = new Hono();

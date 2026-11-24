@@ -23,5 +23,7 @@ export const config = {
   userAgent:
     process.env.DISCOGS_USER_AGENT?.trim() ||
     'CrateCompanion/0.1 +https://github.com/barkingspud/marks-garage',
+  /** The Crate Companion AI server, for AI without a key of your own. */
+  aiServer: process.env.AI_SERVER_URL?.trim() || undefined,
   production: process.env.NODE_ENV === 'production',
 };

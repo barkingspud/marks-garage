@@ -1,0 +1,80 @@
+name: Crate Companion AI server
+
+# Deploys the AI server (crate-companion/ai-server, a Cloudflare Worker) that gives the app
+# AI without a key of its own. Runs when the server or the AI tasks change on main, or by hand.
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
+#   CLOUDFLARE_API_TOKEN   a Cloudflare API token from the "Edit Cloudflare Workers" template
+#   CLOUDFLARE_ACCOUNT_ID  your Cloudflare account ID
+#   ANTHROPIC_API_KEY      the Anthropic key the server uses (set a spend limit on it in the
+#                          Anthropic Console as a backstop)
+# Limits (uses per month, budget) are in crate-companion/ai-server/wrangler.toml.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crate-companion/ai-server/**'
+      - 'crate-companion/core/ai/**'
+      - 'crate-companion/shared/ai-models.ts'
+      - 'crate-companion/package-lock.json'
+      - '.github/workflows/crate-companion-ai-server.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crate-ai-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: crate-companion
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: crate-companion/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Test the server
+        run: npx vitest run ai-server core/ai
+
+      - name: Check the Cloudflare secrets are set
+        id: ready
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID aren't set, so nothing was deployed."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy
+        if: steps.ready.outputs.ok == 'true'
+        run: npx wrangler deploy -c ai-server/wrangler.toml
+
+      - name: Give the server the Anthropic key
+        if: steps.ready.outputs.ok == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::ANTHROPIC_API_KEY isn't set; the server answers that its AI isn't available."
+            exit 0
+          fi
+          printf '%s' "$ANTHROPIC_API_KEY" | npx wrangler secret put ANTHROPIC_API_KEY -c ai-server/wrangler.toml
+

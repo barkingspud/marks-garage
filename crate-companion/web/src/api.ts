@@ -1,5 +1,7 @@
 import type { ConnectionStatus } from '../../core/auth/connection';
 import type { AiStatus, AiUsageReport, AlbumNotes, ListingReview, TonightResult } from '../../shared/ai-types';
+
+type Allowance = NonNullable<AiStatus['allowance']>;
 import type { KeyValueStore } from '../../core/auth/store';
 import type { CrateCore, Job as CoreJob, Status as CoreStatus } from '../../core/crate';
 import type { CollectionField, CollectionFolder, CollectionItem, Listing, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../../shared/discogs-types';
@@ -83,6 +85,7 @@ function core(): Promise<CrateCore> {
       fetch: native?.fetch,
       store: native?.store ?? new BrowserStore(),
       consumer: key && secret ? { key, secret } : undefined,
+      aiServer: (import.meta.env.VITE_AI_SERVER_URL as string | undefined) || undefined,
     });
   });
   return corePromise;
@@ -148,6 +151,7 @@ export const api = {
     removeKey: () => (L ? local((c) => c.aiRemoveKey()) : call<AiStatus>('/ai/key', { method: 'DELETE' })),
     setModel: (model: string) => (L ? local((c) => c.aiSetModel(model)) : call<AiStatus>('/ai/model', { method: 'POST', body: JSON.stringify({ model }) })),
     usage: () => (L ? local((c) => c.aiUsage()) : call<AiUsageReport>('/ai/usage')),
+    allowance: () => (L ? local((c) => c.aiAllowance()) : call<Allowance | null>('/ai/allowance')),
     clearUsage: () => (L ? local((c) => c.aiClearUsage()) : call<AiUsageReport>('/ai/usage', { method: 'DELETE' })),
     review: (listings: Listing[]) => (L ? local((c) => c.aiReviewListings({ listings })) : call<ListingReview>('/ai/review', { method: 'POST', body: JSON.stringify({ listings }) })),
     notes: (releaseId: number) => (L ? local((c) => c.aiNotes(releaseId)) : call<AlbumNotes>(`/ai/notes/${releaseId}`)),

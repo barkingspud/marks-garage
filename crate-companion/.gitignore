@@ -5,3 +5,6 @@ dist/
 .env.*
 !.env.example
 .cache/
+
+# Cloudflare Wrangler local state
+.wrangler/

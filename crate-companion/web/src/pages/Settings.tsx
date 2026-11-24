@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, mode } from '../api';
-import { AiKeyForm, CostMeter, ModelPicker, Sparkle, useAiStatus } from '../components/Ai';
+import { AiKeyForm, CostMeter, IncludedAi, ModelPicker, Sparkle, useAiStatus } from '../components/Ai';
 import { DisconnectButton } from '../components/Disconnect';
 import { PageHeader } from '../components/ui';
 import { useRoom } from '../room';
@@ -34,22 +34,39 @@ export function Settings() {
         <h2 id="h-ai" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Sparkle />AI assistant</h2>
         <p className="sub" style={{ marginBottom: 14 }}>
           Identify pressings from photos, ask for recommendations in your own words, have seller listings reviewed,
-          read notes on an album, and get picks for tonight. It uses Claude, from Anthropic, with your own API key.
+          read notes on an album, and get picks for tonight. It uses Claude, from Anthropic.
         </p>
-        <AiKeyForm />
-        <ModelPicker />
+        {ai.data?.included && <IncludedAi />}
+        {ai.data?.ownKey ? (
+          <>
+            <AiKeyForm />
+            <ModelPicker />
+          </>
+        ) : ai.data?.included ? (
+          <details className="ai-details">
+            <summary>Use your own Anthropic key (optional)</summary>
+            <p className="sub small" style={{ marginBottom: 12 }}>
+              No monthly limit, and you can choose a bigger model such as Opus. Anthropic bills your account for each use.
+            </p>
+            <AiKeyForm />
+          </details>
+        ) : (
+          <AiKeyForm />
+        )}
         <details className="ai-details">
           <summary>Cost and privacy</summary>
           <p className="sub small">
-            Anthropic bills your account for each use. How much depends on the model: under 1¢ a use with Haiku,
-            and roughly 5 to 20¢ with Opus. A set of recommendations costs the most, since it reads your whole album list.
-            When you use a feature, the app sends Anthropic what that feature needs: the photo,
-            your album list, or the listings being reviewed. Nothing is sent until you tap an AI button.
+            {ai.data?.included ? 'The included AI is free to use up to its monthly limit. ' : ''}
+            With your own key, Anthropic bills your account for each use: under 1¢ a use with Haiku,
+            and roughly 5 to 20¢ with Opus.
+            When you use a feature, the app sends what that feature needs (the photo, your album list, or the listings
+            being reviewed){ai.data?.included ? ' through the Crate Companion AI server' : ''} to Anthropic.
+            Nothing is sent until you tap an AI button, and nothing is kept on the server but a count of uses.
           </p>
         </details>
       </section>
 
-      {ai.data?.configured && (
+      {ai.data?.ownKey && (
         <section className="glass panel" aria-labelledby="h-cost">
           <h2 id="h-cost">AI costs</h2>
           <CostMeter />

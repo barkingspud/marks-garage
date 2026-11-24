@@ -7,6 +7,9 @@ name: Crate Companion Android
 # Repository secrets (Settings > Secrets and variables > Actions):
 #   DISCOGS_CONSUMER_KEY, DISCOGS_CONSUMER_SECRET  "Connect with Discogs" (optional; without them
 #                                                  the app offers personal-token sign-in only)
+# Repository variable (same page, Variables tab):
+#   AI_SERVER_URL  the AI server's address, for AI without a key (optional; see
+#                  crate-companion-ai-server.yml)
 #   ANDROID_KEYSTORE_BASE64                        the release keystore, base64-encoded
 #   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 
@@ -35,6 +38,7 @@ jobs:
     env:
       VITE_DISCOGS_CONSUMER_KEY: ${{ secrets.DISCOGS_CONSUMER_KEY }}
       VITE_DISCOGS_CONSUMER_SECRET: ${{ secrets.DISCOGS_CONSUMER_SECRET }}
+      VITE_AI_SERVER_URL: ${{ vars.AI_SERVER_URL }}
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
       VERSION_CODE: ${{ github.run_number }}
     steps:

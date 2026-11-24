@@ -4,10 +4,18 @@ import type { SearchResult } from './discogs-types';
 /** What the AI features return to the app. */
 
 export interface AiStatus {
-  /** An Anthropic API key is saved. */
+  /** The AI features work: the app's included AI is available, or a key of your own is saved. */
   configured: boolean;
-  /** The model the AI features use, chosen in Settings. */
+  /** Where AI requests go: the user's own key, the app's included AI, or nowhere. */
+  source: 'own' | 'included' | null;
+  /** An Anthropic API key of the user's own is saved. */
+  ownKey: boolean;
+  /** This build of the app comes with included AI (the Crate Companion AI server). */
+  included: boolean;
+  /** The model the AI features use: the one chosen in Settings with your own key, else Haiku. */
   model: AiModelId;
+  /** The included AI's allowance as last seen, when it's from this month. */
+  allowance?: { used: number; limit: number; resetsOn: string };
 }
 
 export type AiFeature = 'identify' | 'recommend' | 'review' | 'notes' | 'tonight';
