@@ -50,7 +50,10 @@ const catalog: (BasicInformation & { community: { want: number; have: number } }
       cover_image: '',
       artists: [{ id: artist.id, name: artist.name }],
       labels: [{ id: label.id, name: label.name, catno: `${label.name.slice(0, 3).toUpperCase()}-${100 + i}` }],
-      formats: [{ name: 'Vinyl', qty: '1', descriptions: ['LP', 'Album'] }],
+      // Mostly vinyl, with some CDs and cassettes, like a real mixed collection.
+      formats: [i % 9 === 5 ? { name: 'CD', qty: '1', descriptions: ['Album'] }
+        : i % 13 === 6 ? { name: 'Cassette', qty: '1', descriptions: ['Album'] }
+        : { name: 'Vinyl', qty: '1', descriptions: ['LP', 'Album'] }],
       genres: [artist.genre],
       styles: [pick(styles), pick(styles)].filter((s, j, a) => a.indexOf(s) === j),
       community: { have: 50 + Math.floor(r() * 3000), want: 20 + Math.floor(r() * 4000) },
@@ -103,7 +106,7 @@ const inventories = new Map<string, Listing[]>(
         ships_from: s.ships, allow_offers: r() > 0.5,
         uri: `https://www.discogs.com/sell/item/${s.id * 100000 + i}`,
         seller: { id: s.id, username: s.username, stats: { rating: String(s.rating), total: s.total } },
-        release: { id: b.id, description: `${b.artists[0]!.name} - ${b.title} (LP, Album)`, year: b.year },
+        release: { id: b.id, description: `${b.artists[0]!.name} - ${b.title} (${b.formats[0]!.name === 'Vinyl' ? 'LP' : b.formats[0]!.name}, Album)`, format: `${b.formats[0]!.name === 'Vinyl' ? 'LP' : b.formats[0]!.name}, Album`, year: b.year },
       } satisfies Listing;
     }),
   ]),
@@ -235,7 +238,7 @@ export class MockDiscogs implements DiscogsApi {
   }
   async labelReleases(labelId: number, p = 1, perPage = 100) {
     const items: LabelRelease[] = catalog.filter((b) => b.labels[0]!.id === labelId).map((b) => ({
-      id: b.id, title: b.title, artist: b.artists[0]!.name, year: b.year, catno: b.labels[0]!.catno, format: 'LP', thumb: '',
+      id: b.id, title: b.title, artist: b.artists[0]!.name, year: b.year, catno: b.labels[0]!.catno, format: b.formats[0]!.name === 'Vinyl' ? 'LP' : b.formats[0]!.name, thumb: '',
       stats: { community: { in_wantlist: b.community.want, in_collection: b.community.have } },
     }));
     const { pagination, items: releases } = page(items, p, perPage);
@@ -259,7 +262,7 @@ export class MockDiscogs implements DiscogsApi {
       .map((b) => ({
         id: params.type === 'release' ? b.id : b.master_id, type: params.type === 'release' ? 'release' : 'master',
         master_id: b.master_id, title: `${b.artists[0]!.name} - ${b.title}`,
-        year: String(b.year), genre: b.genres, style: b.styles, label: [b.labels[0]!.name], format: ['Vinyl', 'LP', 'Album'],
+        year: String(b.year), genre: b.genres, style: b.styles, label: [b.labels[0]!.name], format: [b.formats[0]!.name, ...(b.formats[0]!.descriptions ?? [])],
         catno: b.labels[0]!.catno, country: 'US', thumb: '', community: b.community,
       }));
     if (params.sort === 'have') items.sort((a, b) => (b.community?.have ?? 0) - (a.community?.have ?? 0));

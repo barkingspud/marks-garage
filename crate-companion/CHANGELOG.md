@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+**CDs and cassettes**, alongside vinyl:
+
+- Album pages, Home and the collection panel show a CD in its jewel case with a silver disc,
+  or a cassette in its case with the tape sliding out, instead of the record, in the same style.
+- Condition grades are named for the format: Vinyl and Sleeve, Disc and Case, Tape and Case.
+  Favorite shops names its rules for what's on your wantlist ("Media grade" when it's mixed),
+  and each listing's grades for its own format.
+- A Format filter in Collection and Wantlist when you have more than one format.
+- The AI knows about all three: photo identify reads CD matrix and SID codes and cassette
+  shells, and recommendations, notes and listing reviews no longer assume vinyl. Album notes
+  say "This edition" for CDs and cassettes.
+
 - **Adding Favorite shops is easier.** Type a seller name or paste a Discogs link (a shop page,
   a profile or any listing); the app shows the shop (name, location, seller rating, items for
   sale) before you add it. On Android, share a Discogs listing to Crate Companion from the

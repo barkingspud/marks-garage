@@ -6,6 +6,7 @@ import { api } from '../api';
 import { Cover } from '../components/Cover';
 import { ICONS } from '../components/Layout';
 import { RecordHero } from '../components/RecordHero';
+import { kindOf } from '../../../shared/formats';
 import { Tonight } from '../components/Tonight';
 import { ErrorBox, Loading, artistLine } from '../components/ui';
 import { useRoom } from '../room';
@@ -54,7 +55,7 @@ export function Home() {
       {b && (
         <section className="home-hero" aria-label={shuffled ? 'Shuffled album' : 'Album of the day'}>
           <Link to={`/record/${b.id}`} aria-label={`${b.title} by ${artistLine(b)}. Open album.`}>
-            <RecordHero src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={b.labels[0]?.name} />
+            <RecordHero kind={kindOf(b)} src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={b.labels[0]?.name} />
           </Link>
           <div className="home-hero-text">
             <span className="hero-kicker">

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { KIND_NAMES, kindOf, type MediaKind } from '../../../shared/formats';
 import { Link } from 'react-router-dom';
 import type { MarketplaceStats } from '../../../shared/discogs-types';
 import { api } from '../api';
@@ -31,6 +32,7 @@ function Price({ id, title, st, check, inline }: { id: number; title: string; st
 export function Wantlist() {
   const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
   const [q, setQ] = useState('');
+  const [kind, setKind] = useState<MediaKind | ''>('');
   const [stats, setStats] = useState<Record<number, Stat>>({});
   const [checkingAll, setCheckingAll] = useState(false);
   const [view, setView] = useState<'grid' | 'list'>(() => load('want-view', { v: 'grid' as 'grid' | 'list' }).v);
@@ -38,10 +40,17 @@ export function Wantlist() {
   useRoom(null, 340);
 
   const items = wants.data?.items ?? [];
+  // Vinyl, CD, cassette…: only offered when the wantlist has more than one.
+  const kinds = useMemo(() => {
+    const c = new Map<MediaKind, number>();
+    for (const w of items) { const k = kindOf(w.basic_information); c.set(k, (c.get(k) ?? 0) + 1); }
+    return [...c.entries()].sort((a, b) => b[1] - a[1]);
+  }, [items]);
   const shown = useMemo(() => {
     const n = q.trim().toLowerCase();
-    return n ? items.filter((w) => `${w.basic_information.title} ${artistLine(w.basic_information)}`.toLowerCase().includes(n)) : items;
-  }, [items, q]);
+    return items.filter((w) => (!kind || kindOf(w.basic_information) === kind)
+      && (!n || `${w.basic_information.title} ${artistLine(w.basic_information)}`.toLowerCase().includes(n)));
+  }, [items, q, kind]);
 
   async function check(id: number) {
     setStats((s) => ({ ...s, [id]: 'loading' }));
@@ -74,6 +83,12 @@ export function Wantlist() {
           <span className="sr-only">Filter your wantlist</span>
           <input type="search" placeholder="Filter your wantlist" value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
+        {kinds.length > 1 && (
+          <select className="input glass" style={{ width: 'auto', borderRadius: 22, minHeight: 44 }} value={kind} onChange={(e) => setKind(e.target.value as MediaKind | '')} aria-label="Format">
+            <option value="">All formats</option>
+            {kinds.map(([k, n]) => <option key={k} value={k}>{KIND_NAMES[k]} ({n})</option>)}
+          </select>
+        )}
         <div className="seg glass" role="group" aria-label="View">
           <button aria-pressed={view === 'grid'} aria-label="Grid view" onClick={() => setV('grid')}><svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="4" width="7" height="7" /><rect x="13" y="4" width="7" height="7" /><rect x="4" y="13" width="7" height="7" /><rect x="13" y="13" width="7" height="7" /></svg></button>
           <button aria-pressed={view === 'list'} aria-label="List view" onClick={() => setV('list')}><svg viewBox="0 0 24 24" aria-hidden><path d="M4 6h16M4 12h16M4 18h16" /></svg></button>

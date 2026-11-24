@@ -208,6 +208,49 @@ select.input option { background: #1b2028; }
 .hero-sheen { background: conic-gradient(from 200deg, rgba(255,255,255,0) 0deg, rgba(255,255,255,.16) 18deg, rgba(255,255,255,0) 42deg, rgba(255,255,255,0) 180deg, rgba(255,255,255,.10) 198deg, rgba(255,255,255,0) 222deg); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ---------- CD: jewel case in front, silver disc slipping out ---------- */
+.cd-case { padding: 1.3cqw 1.3cqw 1.3cqw 4.6cqw; border-radius: 3px; background: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 40%, rgba(255,255,255,.09)); border: 1px solid rgba(255,255,255,.22); }
+.cd-case .cover { border-radius: 1px; }
+.cd-hinge { position: absolute; left: 0; top: 0; bottom: 0; width: 3.4cqw; border-radius: 3px 0 0 3px; background: repeating-linear-gradient(180deg, rgba(255,255,255,.10) 0 .35cqw, rgba(0,0,0,.18) .35cqw .7cqw), linear-gradient(90deg, rgba(20,22,26,.85), rgba(60,64,72,.7)); box-shadow: inset -1px 0 0 rgba(255,255,255,.18); }
+.cd-gloss { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(118deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,.06) 22%, rgba(255,255,255,0) 38%, rgba(255,255,255,0) 70%, rgba(255,255,255,.08) 100%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.cd-disc {
+  position: absolute; left: 41%; top: 14.5%; width: 53%; aspect-ratio: 1; border-radius: 50%; z-index: 1;
+  background:
+    radial-gradient(circle, var(--room-2) 0 6.4%, rgba(255,255,255,.6) 6.9% 7.5%, rgba(205,212,220,.32) 8% 16.6%, rgba(255,255,255,.45) 17.1% 17.8%, rgba(0,0,0,0) 18.3%),
+    radial-gradient(circle, rgba(0,0,0,0) 0 97.4%, rgba(255,255,255,.55) 98% 98.8%, rgba(0,0,0,0) 99.4%),
+    radial-gradient(circle at 34% 30%, #f6f7f9 0%, #d3d8de 42%, #a3aab3 78%, #8b929b 100%);
+  box-shadow: 0 32px 46px -12px rgba(0,0,0,.85), 0 7px 16px rgba(0,0,0,.5);
+}
+.cd-iris {
+  position: absolute; inset: 0; border-radius: 50%; animation: spin 30s linear infinite; opacity: .85;
+  background: conic-gradient(from 10deg, rgba(255,150,190,0) 0deg, rgba(255,160,140,.42) 22deg, rgba(255,236,150,.30) 44deg, rgba(160,255,210,0) 70deg, rgba(150,220,255,.40) 110deg, rgba(190,150,255,.32) 140deg, rgba(255,150,200,0) 170deg, rgba(255,160,140,.38) 202deg, rgba(255,236,150,.26) 224deg, rgba(160,255,210,0) 250deg, rgba(150,220,255,.38) 290deg, rgba(190,150,255,.30) 320deg, rgba(255,150,190,0) 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 18.4%, #000 19.2% 97.2%, transparent 97.8%); mask: radial-gradient(circle, transparent 0 18.4%, #000 19.2% 97.2%, transparent 97.8%);
+}
+
+/* ---------- Cassette: case in front, the cassette sliding out ---------- */
+.tape-case { position: absolute; left: 6%; top: 5%; width: 41%; aspect-ratio: 64 / 100; transform: rotate(-3deg); z-index: 2; border-radius: 3px; padding: .9cqw; background: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 40%, rgba(255,255,255,.09)); border: 1px solid rgba(255,255,255,.22); box-shadow: 0 30px 40px -10px rgba(0,0,0,.72), 0 6px 12px rgba(0,0,0,.5); }
+.tape-case .cover { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 1px; }
+.tape-shell {
+  position: absolute; left: 39%; top: 25%; width: 58%; aspect-ratio: 100 / 63; z-index: 1; border-radius: 1.6cqw; transform: rotate(2deg);
+  background: linear-gradient(180deg, #2a2c31 0%, #17181c 55%, #101114 100%);
+  box-shadow: 0 32px 46px -12px rgba(0,0,0,.85), 0 7px 16px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12), inset 0 0 0 1px rgba(255,255,255,.05);
+}
+.tape-shell .hero-shade { border-radius: inherit; }
+.tape-label {
+  position: absolute; left: 6%; right: 6%; top: 8%; height: 60%; border-radius: .8cqw;
+  background: radial-gradient(circle at 30% 20%, #f6b54a 0%, #e59a2c 60%, #c97f1f 100%); box-shadow: inset 0 0 0 2px rgba(120,70,10,.3);
+  color: #2b1a05;
+}
+.tape-label-text { position: absolute; left: 15%; right: 6%; top: 7%; display: flex; flex-direction: column; gap: .2cqw; text-align: left; }
+.tape-label-title { font-size: 2.3cqw; font-weight: 800; line-height: 1.05; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tape-window { position: absolute; left: 26%; right: 18%; bottom: 12%; height: 40%; border-radius: 3cqw; background: linear-gradient(180deg, rgba(10,10,12,.92), rgba(30,30,34,.88)); box-shadow: inset 0 1px 3px rgba(0,0,0,.8), 0 0 0 1px rgba(60,40,10,.35); }
+.tape-reel { position: absolute; top: 50%; width: 30%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(0,0,0,0) 0 38%, #3a2615 39% 100%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.tape-reel.left { left: 24%; } .tape-reel.right { left: 76%; width: 24%; }
+.tape-hub { position: absolute; inset: 24%; border-radius: 50%; animation: spin 6s linear infinite; background: radial-gradient(circle, #101012 0 22%, rgba(0,0,0,0) 23%), conic-gradient(#e9e6df 0 20deg, #bdb8ae 20deg 60deg, #e9e6df 60deg 80deg, #bdb8ae 80deg 120deg, #e9e6df 120deg 140deg, #bdb8ae 140deg 180deg, #e9e6df 180deg 200deg, #bdb8ae 200deg 240deg, #e9e6df 240deg 260deg, #bdb8ae 260deg 300deg, #e9e6df 300deg 320deg, #bdb8ae 320deg 360deg); }
+.tape-foot { position: absolute; left: 18%; right: 18%; bottom: 0; height: 18%; border-radius: 1cqw 1cqw 1.6cqw 1.6cqw; background: linear-gradient(180deg, #24262b, #14151a); clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+.tape-screw { position: absolute; width: 2.2%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #8a8d94, #3a3c42); }
+.tape-screw.s1 { left: 2.4%; top: 4%; } .tape-screw.s2 { right: 2.4%; top: 4%; } .tape-screw.s3 { left: 2.4%; bottom: 5%; } .tape-screw.s4 { right: 2.4%; bottom: 5%; }
+
 /* ---------- home ---------- */
 .home-hello .sub { margin-top: 8px; font-size: 17px; }
 .home-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }

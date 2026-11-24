@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MEDIA_GRADES } from '../../../shared/conditions';
+import { gradeLabels, mediaKind } from '../../../shared/formats';
 import type { SearchResult } from '../../../shared/discogs-types';
 import { api, native } from '../api';
 import { Cover } from '../components/Cover';
@@ -100,6 +101,7 @@ export function Check() {
   const low = stats.data?.lowest_price;
   const diff = low && asking > 0 ? asking - low.value : null;
   const head = pick ? split(pick.title) : null;
+  const gradeNames = gradeLabels(mediaKind(pick?.format));
 
   return (
     <div className="page" style={{ maxWidth: 760 }}>
@@ -184,8 +186,8 @@ export function Check() {
             <h2 id="h-fair">Is it a fair price?</h2>
             <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
               <label className="field">Shop price<input className="input" inputMode="decimal" placeholder="12.00" value={price} onChange={(e) => setPrice(e.target.value)} /></label>
-              <label className="field">Vinyl<select className="input" value={media} onChange={(e) => setMedia(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
-              <label className="field">Sleeve<select className="input" value={sleeve} onChange={(e) => setSleeve(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
+              <label className="field">{gradeNames.media}<select className="input" value={media} onChange={(e) => setMedia(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
+              <label className="field">{gradeNames.sleeve}<select className="input" value={sleeve} onChange={(e) => setSleeve(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
             </div>
             <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }} aria-live="polite">
               {stats.isLoading && <Loading label="Checking Discogs…" />}
