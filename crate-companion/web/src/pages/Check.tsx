@@ -67,6 +67,9 @@ export function Check() {
 
   const aiFound = useMemo(() => (source === 'ai' && ai.result ? { total: ai.result.candidates.length, results: ai.result.candidates } : undefined), [source, ai.result]);
   const found = source === 'ai' ? aiFound : search.data;
+  // `pick` is set by an effect, so for one render after a new search or photo it can still be
+  // the old result's: only show it while it's among the current results.
+  const shown = pick && found?.results.some((r) => r.id === pick.id) ? found : undefined;
   useEffect(() => { setPick(found?.results[0] ?? null); bought.reset(); }, [found]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function submit(value = text) {
@@ -127,7 +130,7 @@ export function Check() {
       {source === 'search' && <ErrorBox error={search.error} />}
       {source === 'search' && search.data && !search.data.results.length && <Empty title="No releases found">Try the catalog number from the spine or label, or the barcode digits.</Empty>}
 
-      {pick && head && (
+      {pick && head && shown && (
         <>
           <div className="check-found">
             <Cover src={pick.cover_image || pick.thumb} id={pick.id} alt={`Cover of ${head.title}`} />
@@ -147,7 +150,7 @@ export function Check() {
           <fieldset className="glass panel" style={{ margin: 0 }}>
             <legend className="sr-only">Which pressing is in your hand?</legend>
             <h3 aria-hidden>Which pressing is in your hand?</h3>
-            {found!.results.slice(0, 6).map((r) => (
+            {shown.results.slice(0, 6).map((r) => (
               <label key={r.id} className="pressing">
                 <input type="radio" name="pressing" checked={pick.id === r.id} onChange={() => setPick(r)} />
                 <span><b>{[r.label?.[0], r.catno].filter(Boolean).join(' ') || split(r.title).title}</b>
@@ -155,7 +158,7 @@ export function Check() {
               </label>
             ))}
             <p className="sub small" style={{ marginTop: 10 }}>
-              {found!.total > 6 ? `${found!.total} releases match. ` : ''}Many pressings share a catalog number: compare the runout etched near the label.
+              {shown.total > 6 ? `${shown.total} releases match. ` : ''}Many pressings share a catalog number: compare the runout etched near the label.
             </p>
           </fieldset>
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed: identifying a second album from photos (or a second search on Check an album) could
+  leave a black screen until the app was restarted. If a page ever hits an error now, it shows a
+  message with Try again instead.
 - **Choose the AI model** in Settings: Haiku 5.5 (the new default, under 1¢ a use), Sonnet 5.5
   or Opus 5.5 (the previous model, about 5 to 20¢ a use).
 - **AI costs** in Settings: what the AI has cost this month and all time, and the average cost

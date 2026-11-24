@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { api, mode, type Status } from '../api';
 import { RoomProvider } from '../room';
 import { DisconnectButton } from './Disconnect';
+import { PageErrorBoundary } from './PageErrorBoundary';
 import { forgetJobResults } from '../useJob';
 
 const ICONS = {
@@ -52,7 +53,7 @@ export function Layout({ status }: { status: Status }) {
               </div>
             </aside>
             <main className="main">
-              <Outlet />
+              <PageErrorBoundary key={pathname}><Outlet /></PageErrorBoundary>
               <p className="attribution">
                 Data provided by <a href="https://www.discogs.com" target="_blank" rel="noreferrer">Discogs</a>.
                 Crate Companion is not affiliated with or endorsed by Discogs.
