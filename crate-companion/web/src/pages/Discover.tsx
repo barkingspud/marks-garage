@@ -38,8 +38,8 @@ export function Discover() {
 
   return (
     <div className="page" style={{ maxWidth: 900 }}>
-      <PageHeader title="Picked for you" sub={result ? `From the ${result.profile.total.toLocaleString()} records you own${finishedAt ? `, picked ${whenText(finishedAt)}` : ''}` : 'Records you don’t own yet, chosen from the artists, labels and styles you collect.'}>
-        {!running && <button className="btn primary" onClick={() => start()}>{result ? 'Pick again' : 'Find records for me'}</button>}
+      <PageHeader title="Picked for you" sub={result ? `From the ${result.profile.total.toLocaleString()} albums you own${finishedAt ? `, picked ${whenText(finishedAt)}` : ''}` : 'Albums you don’t own yet, chosen from the artists, labels and styles you collect.'}>
+        {!running && <button className="btn primary" onClick={() => start()}>{result ? 'Pick again' : 'Find albums for me'}</button>}
       </PageHeader>
       {progress && <section className="glass panel"><DiscProgress {...progress} /></section>}
       <ErrorBox error={error ?? add.error} />

@@ -48,7 +48,7 @@ export function Record() {
     return (
       <div className="page">
         <BackButton />
-        <Empty title="Couldn't load this record">
+        <Empty title="Couldn't load this album">
           <a href={discogsUrl('release', id)} target="_blank" rel="noreferrer">See it on Discogs</a>
         </Empty>
         <ErrorBox error={rel.error} />
@@ -90,7 +90,7 @@ export function Record() {
               </div>
               {g.media || g.sleeve ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
-                  {g.media && <GradeMeter label="Record" grade={g.media.grade} text={g.media.text} />}
+                  {g.media && <GradeMeter label="Vinyl" grade={g.media.grade} text={g.media.text} />}
                   {g.sleeve && <GradeMeter label="Sleeve" grade={g.sleeve.grade} text={g.sleeve.text} />}
                 </div>
               ) : (

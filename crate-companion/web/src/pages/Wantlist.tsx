@@ -62,7 +62,7 @@ export function Wantlist() {
 
   return (
     <div className="page">
-      <PageHeader title="Wantlist" sub={wants.data ? `${items.length} records you're after` : undefined}>
+      <PageHeader title="Wantlist" sub={wants.data ? `${items.length} albums you're after` : undefined}>
         <Link className="btn" to="/match">Check my favorite shops</Link>
         <button className="btn primary" onClick={checkAll} disabled={checkingAll || !items.length}>
           {checkingAll ? `Checking prices, ${done} of ${shown.length}…` : 'Check all prices'}
@@ -81,7 +81,7 @@ export function Wantlist() {
       </div>
       {wants.isLoading && <Loading />}
       <ErrorBox error={wants.error} />
-      {wants.data && !items.length && <Empty title="Your wantlist is empty">Add records on Discogs, or from Discover with Add to wantlist.</Empty>}
+      {wants.data && !items.length && <Empty title="Your wantlist is empty">Add albums on Discogs, or from Discover with Add to wantlist.</Empty>}
 
       {view === 'grid' ? (
         <ul className="bin">
