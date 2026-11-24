@@ -214,7 +214,7 @@ export function Check() {
           <div className="page-actions">
             {ownershipKnown && !ownThis && <button className="btn primary" disabled={bought.isPending || bought.isSuccess} onClick={() => bought.mutate()}>{bought.isSuccess ? 'Added to your collection' : 'I bought it'}</button>}
             {stats.data?.num_for_sale ? <a className="btn" href={`https://www.discogs.com/sell/release/${pick.id}`} target="_blank" rel="noreferrer">See the listings</a> : null}
-            {ownThis && <Link className="btn" to={`/record/${pick.id}`}>Open your copy</Link>}
+            <Link className="btn" to={`/record/${pick.id}`}>{ownThis ? 'Open your copy' : 'Open album'}</Link>
           </div>
           {bought.isSuccess && <p className="sub">Added to your Discogs collection{wantedThis ? ' and removed from your wantlist' : ''}.</p>}
           <ErrorBox error={bought.error} />
