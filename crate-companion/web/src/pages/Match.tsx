@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { parseSellerInput, type SellerCard } from '../../../shared/sellers';
+import { gradeLabels, kindOf, mediaKind } from '../../../shared/formats';
 import { GRADE_LABELS, MEDIA_GRADES, parseGrade, type Grade } from '../../../shared/conditions';
 import { buyerPrice, DEFAULT_CRITERIA, type MatchCriteria } from '../../../shared/matching';
 import type { MatchResult } from '../../../shared/api-types';
@@ -9,7 +10,7 @@ import { DiscProgress, Empty, ErrorBox, GradeChip, PageHeader, money } from '../
 import { useRoom } from '../room';
 import { load, save, whenText } from '../storage';
 import { useJob } from '../useJob';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type { ListingReview } from '../../../shared/ai-types';
 import { api, native } from '../api';
 import { AiGate, Sparkle } from '../components/Ai';
@@ -25,6 +26,7 @@ export function Match() {
   const [shipsText, setShipsText] = useState(() => cfg.criteria.shipsFrom.join(', '));
   const [editing, setEditing] = useState(false);
   const { result, finishedAt, progress, error, running, start } = useJob<MatchResult>('match');
+  const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
   // The AI's review belongs to one scan; it's kept until the next scan.
   const [review, setReview] = useState<ListingReview | null>(() => {
     const r = load<{ at?: number; review?: ListingReview }>('ai-review', {});
@@ -78,9 +80,12 @@ export function Match() {
 
   const showSetup = !running && (!result || editing);
   const c = cfg.criteria;
+  // All vinyl (or all CDs…): name the grades for it; a mixed wantlist gets neutral names.
+  const wantKinds = new Set((wants.data?.items ?? []).map((w) => kindOf(w.basic_information)));
+  const ruleNames = wantKinds.size === 1 ? gradeLabels([...wantKinds][0]!) : { media: 'Media', sleeve: 'Sleeve or case' };
   const rules = [
-    `vinyl ${c.minMedia} or better`,
-    c.minSleeve === 'any' ? 'any sleeve' : `sleeve ${c.minSleeve} or better`,
+    `${ruleNames.media.toLowerCase()} ${c.minMedia} or better`,
+    c.minSleeve === 'any' ? `any ${ruleNames.sleeve.toLowerCase()}` : `${ruleNames.sleeve.toLowerCase()} ${c.minSleeve} or better`,
     c.shipsFrom.length ? `shipping from ${c.shipsFrom.join(' or ')}` : 'shipping from anywhere',
     `sellers rated ${c.minSellerRating}% or more`,
     ...(c.maxPrice !== null ? [`up to ${c.maxPrice}`] : []),
@@ -159,8 +164,8 @@ export function Match() {
           <section className="glass panel" aria-labelledby="h-rules">
             <h2 id="h-rules">Your rules</h2>
             <div className="form-grid">
-              <label className="field">Vinyl grade at least<GradeSelect value={c.minMedia} onChange={(g) => setCrit({ minMedia: g as Grade })} /></label>
-              <label className="field">Sleeve grade at least<GradeSelect value={c.minSleeve} allowAny onChange={(g) => setCrit({ minSleeve: g })} /></label>
+              <label className="field">{ruleNames.media} grade at least<GradeSelect value={c.minMedia} onChange={(g) => setCrit({ minMedia: g as Grade })} /></label>
+              <label className="field">{ruleNames.sleeve} grade at least<GradeSelect value={c.minSleeve} allowAny onChange={(g) => setCrit({ minSleeve: g })} /></label>
               <label className="field">Seller rating at least (%)<input className="input" type="number" step="0.1" min={0} max={100} value={c.minSellerRating} onChange={(e) => setCrit({ minSellerRating: Number(e.target.value) })} /></label>
               <label className="field">Seller ratings at least<input className="input" type="number" min={0} value={c.minSellerRatings} onChange={(e) => setCrit({ minSellerRatings: Number(e.target.value) })} /></label>
               <label className="field">Max price (your currency)<input className="input" type="number" min={0} placeholder="No limit" value={c.maxPrice ?? ''} onChange={(e) => setCrit({ maxPrice: e.target.value ? Number(e.target.value) : null })} /></label>
@@ -234,8 +239,8 @@ export function Match() {
                       <a href={l.uri} target="_blank" rel="noreferrer">{l.release.description}</a>
                       <div className="chip-row" style={{ gap: 6 }}>
                         {verdicts.get(l.id) && <span className={`verdict-chip ${verdicts.get(l.id)!.verdict}`}>{VERDICT[verdicts.get(l.id)!.verdict]}</span>}
-                        <GradeChip label="Vinyl" grade={parseGrade(l.condition)} />
-                        <GradeChip label="Sleeve" grade={parseGrade(l.sleeve_condition)} />
+                        <GradeChip label={gradeLabels(mediaKind(l.release.format)).media} grade={parseGrade(l.condition)} />
+                        <GradeChip label={gradeLabels(mediaKind(l.release.format)).sleeve} grade={parseGrade(l.sleeve_condition)} />
                       </div>
                     </div>
                     <div className="match-score"><b>{score}</b><span>out of 100</span></div>

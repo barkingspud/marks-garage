@@ -5,6 +5,7 @@ import type { CollectionItem } from '../../../shared/discogs-types';
 import { api } from '../api';
 import { Cover } from '../components/Cover';
 import { RecordHero } from '../components/RecordHero';
+import { gradeLabels, KIND_NAMES, kindOf, type MediaKind } from '../../../shared/formats';
 import { RateRecord, Stars } from '../components/Stars';
 import { Empty, ErrorBox, GradeChip, Loading, PageHeader, artistLine } from '../components/ui';
 import { myGrades } from '../grades';
@@ -19,7 +20,7 @@ const SORTS: [Sort, string][] = [['added', 'Newest first'], ['artist', 'Artist']
  * How the collection was left: kept while the app is open, so going back from an album
  * returns to the same search, filter, sort and place in the list.
  */
-const memo = { folder: 0, q: '', style: '', sort: 'added' as Sort, scrollY: 0 };
+const memo = { folder: 0, q: '', style: '', kind: '' as MediaKind | '', sort: 'added' as Sort, scrollY: 0 };
 
 export function Collection() {
   const [folder, setFolderState] = useState(memo.folder);
@@ -29,6 +30,8 @@ export function Collection() {
   const setFolder = (v: number) => { memo.folder = v; memo.scrollY = 0; setFolderState(v); };
   const setQ = (v: string) => { memo.q = v; setQState(v); };
   const setStyle = (v: string) => { memo.style = v; setStyleState(v); };
+  const [kind, setKindState] = useState<MediaKind | ''>(memo.kind);
+  const setKind = (v: MediaKind | '') => { memo.kind = v; setKindState(v); };
   const setSort = (v: Sort) => { memo.sort = v; setSortState(v); };
   const [view, setView] = useState<'grid' | 'list'>(() => load('view', { v: 'grid' as 'grid' | 'list' }).v);
   const [selected, setSelected] = useState<number | null>(null);
@@ -53,6 +56,12 @@ export function Collection() {
   }, [coll.data]);
 
   const items = coll.data?.items ?? [];
+  // Vinyl, CD, cassette…: only offered when the collection has more than one.
+  const kinds = useMemo(() => {
+    const n = new Map<MediaKind, number>();
+    for (const i of items) { const k = kindOf(i.basic_information); n.set(k, (n.get(k) ?? 0) + 1); }
+    return [...n.entries()].sort((a, b) => b[1] - a[1]);
+  }, [items]);
   const styles = useMemo(() => {
     const n = new Map<string, number>();
     for (const i of items) for (const s of i.basic_information.styles ?? []) n.set(s, (n.get(s) ?? 0) + 1);
@@ -63,6 +72,7 @@ export function Collection() {
     const out = items.filter((i) => {
       const b = i.basic_information;
       if (style && !b.styles?.includes(style)) return false;
+      if (kind && kindOf(b) !== kind) return false;
       if (!needle) return true;
       return [b.title, artistLine(b), ...b.labels.map((l) => `${l.name} ${l.catno ?? ''}`)].join(' ').toLowerCase().includes(needle);
     });
@@ -74,7 +84,7 @@ export function Collection() {
       rating: (a, b) => b.rating - a.rating,
     };
     return out.sort(by[sort]);
-  }, [items, q, style, sort]);
+  }, [items, q, style, kind, sort]);
 
   const current = wide ? (shown.find((i) => i.instance_id === selected) ?? shown[0]) : undefined;
   useRoom(current ? current.basic_information.cover_image || current.basic_information.thumb : null, 215);
@@ -105,6 +115,12 @@ export function Collection() {
         <select className="input glass" style={{ width: 'auto', borderRadius: 22, minHeight: 44 }} value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
           {SORTS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
         </select>
+        {kinds.length > 1 && (
+          <select className="input glass" style={{ width: 'auto', borderRadius: 22, minHeight: 44 }} value={kind} onChange={(e) => setKind(e.target.value as MediaKind | '')} aria-label="Format">
+            <option value="">All formats</option>
+            {kinds.map(([k, n]) => <option key={k} value={k}>{KIND_NAMES[k]} ({n})</option>)}
+          </select>
+        )}
         <div className="seg glass" role="group" aria-label="View">
           <button aria-pressed={view === 'grid'} aria-label="Grid view" onClick={() => setV('grid')}><svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="4" width="7" height="7" /><rect x="13" y="4" width="7" height="7" /><rect x="4" y="13" width="7" height="7" /><rect x="13" y="13" width="7" height="7" /></svg></button>
           <button aria-pressed={view === 'list'} aria-label="List view" onClick={() => setV('list')}><svg viewBox="0 0 24 24" aria-hidden><path d="M4 6h16M4 12h16M4 18h16" /></svg></button>
@@ -169,9 +185,11 @@ export function Collection() {
 function SidePanel({ item, fields }: { item: CollectionItem; fields: Parameters<typeof myGrades>[1] }) {
   const b = item.basic_information;
   const g = myGrades(item, fields);
+  const kind = kindOf(b);
+  const names = gradeLabels(kind);
   return (
     <aside className="detail-panel glass" aria-label="Selected album">
-      <RecordHero src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} />
+      <RecordHero kind={kind} src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} />
       <div>
         <h2 style={{ fontSize: 28 }}>{b.title}</h2>
         <p className="sub" style={{ marginTop: 6 }}>{artistLine(b)}{b.year ? `, ${b.year}` : ''}</p>
@@ -180,8 +198,8 @@ function SidePanel({ item, fields }: { item: CollectionItem; fields: Parameters<
       <RateRecord item={item} />
       {(g.media || g.sleeve) && (
         <div className="chip-row">
-          {g.media && <GradeChip label="Vinyl" grade={g.media.grade} />}
-          {g.sleeve && <GradeChip label="Sleeve" grade={g.sleeve.grade} />}
+          {g.media && <GradeChip label={names.media} grade={g.media.grade} />}
+          {g.sleeve && <GradeChip label={names.sleeve} grade={g.sleeve.grade} />}
         </div>
       )}
       <div className="chip-row">{(b.styles ?? []).map((s) => <span key={s} className="chip static">{s}</span>)}</div>

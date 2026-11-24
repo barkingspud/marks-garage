@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { BasicInformation, ReleaseDetails, Track } from '../../../shared/discogs-types';
 import { api } from '../api';
 import { RecordHero } from '../components/RecordHero';
+import { gradeLabels, kindOf, type MediaKind } from '../../../shared/formats';
 import { RateRecord } from '../components/Stars';
 import { Empty, ErrorBox, GradeMeter, Loading, artistLine, discogsUrl, formatLine, money } from '../components/ui';
 import { groupCredits, plainNotes } from '../discogs-text';
@@ -60,6 +61,8 @@ export function Record() {
     );
   }
   const g = myGrades(owned, fields.data?.fields);
+  const kind = kindOf(b);
+  const names = gradeLabels(kind);
   const label = (d?.labels ?? b.labels)[0];
   const format = d ? formatLine({ formats: d.formats }) + formatText(d) : formatLine(b);
   const forSale = stats.data?.num_for_sale ?? 0;
@@ -68,7 +71,7 @@ export function Record() {
     <div className="page">
       <BackButton />
       <div className="detail">
-        <RecordHero src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={label?.name} />
+        <RecordHero kind={kind} src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={label?.name} />
         <div className="detail-info">
           <div>
             <h1>{b.title}</h1>
@@ -94,8 +97,8 @@ export function Record() {
               </div>
               {g.media || g.sleeve ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
-                  {g.media && <GradeMeter label="Vinyl" grade={g.media.grade} text={g.media.text} />}
-                  {g.sleeve && <GradeMeter label="Sleeve" grade={g.sleeve.grade} text={g.sleeve.text} />}
+                  {g.media && <GradeMeter label={names.media} grade={g.media.grade} text={g.media.text} />}
+                  {g.sleeve && <GradeMeter label={names.sleeve} grade={g.sleeve.grade} text={g.sleeve.text} />}
                 </div>
               ) : (
                 <p className="sub" style={{ marginTop: 10 }}>No grades yet. Add them in your collection on Discogs (Media and Sleeve Condition) and they'll show here.</p>
@@ -145,7 +148,7 @@ export function Record() {
         </div>
       </div>
 
-      <AiNotes id={id} />
+      <AiNotes id={id} kind={kind} />
       {rel.isLoading && <Loading label="Loading the track listing…" />}
       {rel.error && !d ? <ErrorBox error={rel.error} /> : null}
       {d && <ReleaseSections d={d} />}
@@ -154,7 +157,7 @@ export function Record() {
 }
 
 /** The AI's notes on the album and this pressing, kept on the device once written. */
-function AiNotes({ id }: { id: number }) {
+function AiNotes({ id, kind }: { id: number; kind: MediaKind }) {
   const storeKey = `ai-notes-${id}`;
   const [saved, setSaved] = useState(() => load<{ n?: AlbumNotes; model?: string }>(storeKey, {}));
   const notes = saved.n ?? null;
@@ -190,7 +193,7 @@ function AiNotes({ id }: { id: number }) {
                 <ul>{notes.listenFor.map((x, i) => <li key={i}>{x}</li>)}</ul>
               </>
             )}
-            <h3>This pressing</h3>
+            <h3>{kind === 'vinyl' ? 'This pressing' : 'This edition'}</h3>
             <p>{notes.thisPressing}</p>
             {notes.caveat && <p className="sub small">{notes.caveat}</p>}
             <p className="sub small">Written by AI{writtenBy ? ` (${writtenBy})` : ''} from what it knows and the Discogs data. It can be wrong.</p>
