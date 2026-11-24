@@ -411,10 +411,11 @@ export class CrateCore {
   }
 
   /** A few albums from your own shelves for right now. */
-  async aiTonight(body: { mood?: string }): Promise<TonightResult> {
+  async aiTonight(body: { mood?: string; avoid?: number[] }): Promise<TonightResult> {
     const ask = await this.asker('tonight');
     const u = await this.me();
-    return playTonight(ask, body.mood?.trim().slice(0, 300) ?? '', await fetchCollection(this.api, u));
+    const avoid = (Array.isArray(body.avoid) ? body.avoid : []).filter((n) => Number.isInteger(n)).slice(0, 12);
+    return playTonight(ask, body.mood?.trim().slice(0, 300) ?? '', await fetchCollection(this.api, u), avoid);
   }
 
   // ------------------------------------------------ Connect with Discogs
