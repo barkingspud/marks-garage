@@ -61,7 +61,7 @@ export function Settings() {
             and roughly 5 to 20¢ with Opus.
             When you use a feature, the app sends what that feature needs (the photo, your album list, or the listings
             being reviewed){ai.data?.included ? ' through the Crate Companion AI server' : ''} to Anthropic.
-            Nothing is sent until you tap an AI button, and nothing is kept on the server but a count of uses.
+            Nothing is sent until you tap an AI button. The server keeps only a count of uses, and album notes, which are shared with anyone who opens the same pressing.
           </p>
         </details>
       </section>

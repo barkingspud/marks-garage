@@ -28,6 +28,8 @@ export class MeterObject extends DurableObject<Env> {
   refund(install: string, use: string) { return this.meter.refund(install, use); }
   spend(usd: number) { return this.meter.spend(usd); }
   allowance(install: string) { return this.meter.allowance(install); }
+  getNotes(releaseId: number) { return this.meter.getNotes(releaseId); }
+  putNotes(releaseId: number, notes: unknown) { return this.meter.putNotes(releaseId, notes); }
   spent() { return this.meter.spent(); }
 }
 
@@ -42,6 +44,8 @@ export default {
         refund: (i, u) => meter.refund(i, u),
         spend: (usd) => meter.spend(usd),
         allowance: (i) => meter.allowance(i),
+        getNotes: (id) => meter.getNotes(id) as Promise<unknown | undefined>,
+        putNotes: (id, n) => meter.putNotes(id, n),
       },
       run: (task, content) => runTask(client, MODEL, { task, content }, 8000),
     });

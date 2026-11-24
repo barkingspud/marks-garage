@@ -186,6 +186,8 @@ describe('included AI (the AI server)', () => {
     const included = {
       check: async () => undefined,
       allowance: async () => ({ ...allowance, used: 7 }),
+      sharedNotes: async () => null,
+      writeNotes: async () => { throw new Error('unused'); },
       ask: async (o: { task: string }, model: string, use?: string) => {
         calls.push({ task: o.task, model, use });
         const output = o.task === 'identify-read'
@@ -272,5 +274,62 @@ describe('tonight picks', () => {
     expect(order(sent[0]!)).not.toBe(order(sent[1]!));
     expect(sent[0]).not.toMatch(/Picked last time/);
     expect(sent[1]).toMatch(/Picked last time, so choose different ones: 11, 22/);
+  });
+});
+
+describe('shared album notes in the app', () => {
+  const notes = { about: 'A warm 1973 soul album.', listenFor: ['The title track.'], thisPressing: 'A standard US pressing.', caveat: '' };
+  function included(stored: Map<number, typeof notes>) {
+    const writes: { id: number; content: string }[] = [];
+    return {
+      writes,
+      ai: {
+        check: async () => undefined,
+        allowance: async () => ({ used: 0, limit: 150, resetsOn: '2999-01-01' }),
+        ask: async () => { throw new Error('notes should go through the shared path'); },
+        sharedNotes: async (id: number) => stored.get(id) ?? null,
+        writeNotes: async (id: number, content: string) => {
+          writes.push({ id, content });
+          const hit = stored.get(id);
+          if (hit) return { output: hit };
+          stored.set(id, notes);
+          return { output: notes, allowance: { used: 1, limit: 150, resetsOn: '2999-01-01' } };
+        },
+      },
+    };
+  }
+
+  it('writes notes through the shared store, then shows them to the next user for free', async () => {
+    const api = new MockDiscogs();
+    const id = (await fetchCollection(api, 'demo'))[0]!.id;
+    const stored = new Map<number, typeof notes>();
+    const a = included(stored);
+    const first = CrateCore.fromApi(api, undefined, new MemoryStore(), undefined, { includedAi: () => a.ai });
+    expect(await first.aiSharedNotes(id)).toBeNull();
+    expect(await first.aiNotes(id)).toEqual(notes);
+    expect(a.writes).toHaveLength(1);
+    expect(JSON.parse(a.writes[0]!.content.replace(/<\/?data>/g, '')).id).toBe(id); // the server checks this
+    expect((await first.aiStatus()).allowance?.used).toBe(1);
+
+    const b = included(stored);
+    const second = CrateCore.fromApi(api, undefined, new MemoryStore(), undefined, { includedAi: () => b.ai });
+    expect(await second.aiSharedNotes(id)).toEqual(notes);
+  });
+
+  it('keeps notes written with your own key private', async () => {
+    const api = new MockDiscogs();
+    const id = (await fetchCollection(api, 'demo'))[0]!.id;
+    const stored = new Map<number, typeof notes>();
+    const a = included(stored);
+    const own: string[] = [];
+    const core = CrateCore.fromApi(api, undefined, new MemoryStore(), () => ({
+      check: async () => undefined,
+      ask: async (o) => { own.push(o.task); return { output: notes as never }; },
+    }), { includedAi: () => a.ai });
+    await core.aiSetKey('sk-ant-test');
+    expect(await core.aiNotes(id)).toEqual(notes);
+    expect(own).toEqual(['notes']);
+    expect(a.writes).toHaveLength(0);
+    expect(stored.size).toBe(0);
   });
 });

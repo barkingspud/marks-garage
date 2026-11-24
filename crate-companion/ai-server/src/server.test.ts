@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AiError } from '../../core/ai/llm';
 import { checkContent, TASKS } from '../../core/ai/tasks';
-import { handle, type Deps } from './handler';
+import { handle, notesReleaseId, type Deps } from './handler';
 import { Meter, nextMonth, type Store } from './meter';
 
 class MapStore implements Store {
@@ -78,6 +78,8 @@ describe('request handling', () => {
         refund: (i, u) => meter.refund(i, u, now),
         spend: (usd) => meter.spend(usd, now),
         allowance: (i) => meter.allowance(i, now),
+        getNotes: (id) => meter.getNotes(id),
+        putNotes: (id, n) => meter.putNotes(id, n),
       },
       run: async (task) => { ran.push(task); return { output: { note: 'Enjoy.', picks: [] }, usage }; },
       ...over,
@@ -136,6 +138,67 @@ describe('request handling', () => {
     const { deps } = setup();
     const res = await handle(new Request('https://ai.example/v1/allowance', { headers: { 'x-install-id': INSTALL } }), deps);
     expect(await res.json()).toEqual({ used: 0, limit: 3, resetsOn: '2026-12-01' });
+  });
+});
+
+describe('shared album notes', () => {
+  const usage = { model: 'claude-haiku-5-5', tokens: { input: 2_000, output: 600, cacheRead: 0, cacheWrite: 0 } };
+  const notes = { about: 'A warm 1973 soul album.', listenFor: ['The title track.'], thisPressing: 'A standard US pressing.', caveat: '' };
+  const content = (id: number) => `<data>\n${JSON.stringify({ id, title: 'Drift Away' })}\n</data>`;
+  function setup(enabled = true) {
+    const meter = new Meter(new MapStore(), limits);
+    let runs = 0;
+    const deps: Deps = {
+      enabled,
+      meter: {
+        reserve: (i, u, ip) => meter.reserve(i, u, ip, now), refund: (i, u) => meter.refund(i, u, now),
+        spend: (usd) => meter.spend(usd, now), allowance: (i) => meter.allowance(i, now),
+        getNotes: (id) => meter.getNotes(id), putNotes: (id, n) => meter.putNotes(id, n),
+      },
+      run: async () => { runs++; return { output: notes, usage }; },
+    };
+    return { deps, meter, runs: () => runs };
+  }
+  const req = (method: string, id: number, body?: unknown, install = INSTALL) => new Request(`https://ai.example/v1/notes/${id}`, {
+    method, headers: { 'content-type': 'application/json', 'x-install-id': install }, body: body ? JSON.stringify(body) : undefined,
+  });
+  const OTHER = '11111111-2222-4333-8444-555555555555';
+
+  it('writes notes once per pressing; everyone after gets them free', async () => {
+    const { deps, meter, runs } = setup();
+    expect((await handle(req('GET', 1869293), deps)).status).toBe(404);
+
+    const first = await handle(req('POST', 1869293, { content: content(1869293), use: 'u1' }), deps);
+    expect(first.status).toBe(200);
+    expect(await first.json()).toMatchObject({ output: notes, shared: false, allowance: { used: 1 } });
+
+    // Another user: the same notes, no AI request, no use counted.
+    const second = await handle(req('POST', 1869293, { content: content(1869293), use: 'u2' }, OTHER), deps);
+    expect(await second.json()).toEqual({ output: notes, shared: true });
+    const got = await handle(req('GET', 1869293, undefined, OTHER), deps);
+    expect(await got.json()).toEqual({ output: notes, shared: true });
+    expect(runs()).toBe(1);
+    expect((await meter.allowance(OTHER, now)).used).toBe(0);
+  });
+
+  it('refuses notes about a different pressing than the one they would be kept under', async () => {
+    const { deps, runs } = setup();
+    const res = await handle(req('POST', 1869293, { content: content(999), use: 'u1' }), deps);
+    expect(res.status).toBe(400);
+    expect(runs()).toBe(0);
+  });
+
+  it('still serves shared notes when new AI requests are turned off', async () => {
+    const { deps, meter } = setup(false);
+    await meter.putNotes(1869293, notes);
+    expect((await handle(req('POST', 1869293, { content: content(1869293) }), deps)).status).toBe(200);
+    expect((await handle(req('POST', 42, { content: content(42) }), deps)).status).toBe(503);
+  });
+
+  it('reads the release id from the notes content', () => {
+    expect(notesReleaseId(content(1869293))).toBe(1869293);
+    expect(notesReleaseId('no data')).toBeNull();
+    expect(notesReleaseId('<data>not json</data>')).toBeNull();
   });
 });
 

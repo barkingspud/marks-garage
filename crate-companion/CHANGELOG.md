@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Shared album notes.** Notes written by the included AI are kept on the AI server for that
+  pressing, so the next person to open it sees them right away, free and without using any of
+  their monthly AI uses. The first person still taps "Write notes with AI" (one use). Notes
+  written with your own Anthropic key stay private.
+
 Bug fixes from the UI/UX review (no visual redesign):
 
 - Check an album no longer says "Not in your collection or wantlist" while your collection is
