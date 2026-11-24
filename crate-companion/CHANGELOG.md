@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Check an album: **Open album** for any pressing you find (not only ones you own), with its
+  track listing, credits, price on Discogs and Add to wantlist.
+
 **CDs and cassettes**, alongside vinyl:
 
 - Album pages, Home and the collection panel show a CD in its jewel case with a silver disc,
