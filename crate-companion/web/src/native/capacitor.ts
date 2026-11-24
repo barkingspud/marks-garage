@@ -28,9 +28,10 @@ async function nativeFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   const headers: Record<string, string> = {};
   new Headers(init?.headers).forEach((v, k) => { headers[k] = v; });
   const image = new URL(url).hostname === 'i.discogs.com';
+  const json = (headers['content-type'] ?? '').includes('application/json');
   const res = await CapacitorHttp.request({
     url, method: init?.method ?? 'GET', headers,
-    data: typeof init?.body === 'string' ? init.body : undefined,
+    data: typeof init?.body === 'string' ? (json ? JSON.parse(init.body) : init.body) : undefined,
     responseType: image ? 'blob' : 'text',
   });
   let body: BodyInit | null = image && typeof res.data === 'string'

@@ -76,6 +76,7 @@ export class DiscogsClient implements DiscogsApi {
     path: string,
     query: Record<string, string | number | undefined> = {},
     ttlMs = 0,
+    body?: unknown,
   ): Promise<T> {
     const url = new URL(BASE + path);
     for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== '') url.searchParams.set(k, String(v));
@@ -90,12 +91,13 @@ export class DiscogsClient implements DiscogsApi {
       'User-Agent': this.opts.userAgent,
       Accept: 'application/vnd.discogs.v2.discogs+json',
     };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
 
     for (let attempt = 0; ; attempt++) {
       await this.limiter.acquire();
       // Re-sign each attempt: OAuth headers carry a one-time nonce and timestamp.
       if (this.opts.auth) headers.Authorization = authorizationHeader(this.opts.auth);
-      const res = await this.http(key, { method, headers });
+      const res = await this.http(key, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
       this.limiter.update(res.headers.get('X-Discogs-Ratelimit-Remaining'));
 
       if (res.status === 429 && attempt < 3) {
@@ -109,9 +111,9 @@ export class DiscogsClient implements DiscogsApi {
         } catch { /* non-JSON error body */ }
         throw new DiscogsError(res.status, `Discogs ${res.status} on ${method} ${path}: ${msg}`);
       }
-      const body = (res.status === 204 ? undefined : await res.json()) as T;
-      if (method === 'GET' && ttlMs > 0) this.cache.set(key, body, ttlMs);
-      return body;
+      const data = (res.status === 204 ? undefined : await res.json()) as T;
+      if (method === 'GET' && ttlMs > 0) this.cache.set(key, data, ttlMs);
+      return data;
     }
   }
 
@@ -158,6 +160,15 @@ export class DiscogsClient implements DiscogsApi {
   async removeWant(username: string, releaseId: number) {
     await this.request('DELETE', `/users/${encodeURIComponent(username)}/wants/${releaseId}`);
     this.invalidateUser(username);
+  }
+  async setRating(username: string, folderId: number, releaseId: number, instanceId: number, rating: number) {
+    await this.request('POST',
+      `/users/${encodeURIComponent(username)}/collection/folders/${folderId}/releases/${releaseId}/instances/${instanceId}`,
+      {}, 0, { rating });
+    this.invalidateUser(username);
+  }
+  release(releaseId: number) {
+    return this.request<Awaited<ReturnType<DiscogsApi['release']>>>('GET', `/releases/${releaseId}`, {}, 24 * HOUR);
   }
   marketplaceStats(releaseId: number, currency?: string) {
     return this.request<Awaited<ReturnType<DiscogsApi['marketplaceStats']>>>(

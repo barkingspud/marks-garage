@@ -36,6 +36,8 @@ export function createApp(core: CrateCore) {
     const b = await c.req.json<{ releaseId?: number; removeFromWants?: boolean }>();
     return c.json(await core.addToCollection(b.releaseId ?? 0, b.removeFromWants));
   });
+  app.post('/collection/rating', async (c) => c.json(await core.rate(await c.req.json())));
+  app.get('/releases/:releaseId', async (c) => c.json(await core.release(num(c, 'releaseId'))));
   app.get('/wants', async (c) => c.json(await core.wants()));
   app.post('/wants', async (c) => c.json(await core.addWant(await c.req.json())));
   app.delete('/wants/:releaseId', async (c) => c.json(await core.removeWant(num(c, 'releaseId'))));

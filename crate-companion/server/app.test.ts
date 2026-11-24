@@ -34,4 +34,25 @@ describe('app routes for the redesign', () => {
     expect(coll.items.some((i) => i.id === id)).toBe(true);
     expect(after.items.some((w) => w.id === id)).toBe(false);
   });
+
+  it('rates a record in the collection and checks the rating', async () => {
+    const coll = await (await app.request('/api/collection')).json() as { items: { id: number; instance_id: number; folder_id: number; rating: number }[] };
+    const item = coll.items[0]!;
+    const post = (rating: unknown) => app.request('/api/collection/rating', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ releaseId: item.id, instanceId: item.instance_id, folderId: item.folder_id, rating }),
+    });
+    expect((await post(6)).status).toBe(400);
+    expect((await post(2.5)).status).toBe(400);
+    expect((await post(4)).status).toBe(200);
+    const after = await (await app.request('/api/collection')).json() as typeof coll;
+    expect(after.items.find((i) => i.instance_id === item.instance_id)!.rating).toBe(4);
+  });
+
+  it('returns a release with its track listing', async () => {
+    const coll = await (await app.request('/api/collection')).json() as { items: { id: number }[] };
+    const r = await (await app.request(`/api/releases/${coll.items[0]!.id}`)).json() as { tracklist: { position: string }[]; identifiers: unknown[] };
+    expect(r.tracklist.length).toBeGreaterThan(0);
+    expect(r.identifiers.length).toBeGreaterThan(0);
+  });
 });

@@ -5,6 +5,7 @@ import type { CollectionItem } from '../../../shared/discogs-types';
 import { api } from '../api';
 import { Cover } from '../components/Cover';
 import { RecordHero } from '../components/RecordHero';
+import { RateRecord, Stars } from '../components/Stars';
 import { Empty, ErrorBox, GradeChip, Loading, PageHeader, artistLine } from '../components/ui';
 import { myGrades } from '../grades';
 import { useRoom } from '../room';
@@ -124,7 +125,7 @@ export function Collection() {
                       <span>{artistLine(b)}{b.year ? `, ${b.year}` : ''}</span>
                       <span>{b.labels[0] ? `${b.labels[0].name} ${b.labels[0].catno ?? ''}` : ''}</span>
                     </span>
-                    {i.rating > 0 && <span className="sub" aria-label={`Your rating ${i.rating} of 5`}>{'★'.repeat(i.rating)}</span>}
+                    {i.rating > 0 && <Stars value={i.rating} />}
                   </li>
                 );
               })}
@@ -148,6 +149,7 @@ function SidePanel({ item, fields }: { item: CollectionItem; fields: Parameters<
         <p className="sub" style={{ marginTop: 6 }}>{artistLine(b)}{b.year ? `, ${b.year}` : ''}</p>
         <p className="sub small" style={{ marginTop: 4 }}>{b.labels[0] ? `${b.labels[0].name} ${b.labels[0].catno ?? ''}, ` : ''}added {new Date(item.date_added).toLocaleDateString()}</p>
       </div>
+      <RateRecord item={item} />
       {(g.media || g.sleeve) && (
         <div className="chip-row">
           {g.media && <GradeChip label="Record" grade={g.media.grade} />}

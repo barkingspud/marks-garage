@@ -333,3 +333,41 @@ select.input option { background: #1b2028; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- star ratings */
+.stars { display: inline-flex; align-items: center; gap: 2px; }
+.stars svg { width: 16px; height: 16px; fill: rgba(255,255,255,.16); stroke: none; }
+.stars svg.on { fill: var(--amber); }
+.stars-input button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; padding: 0; cursor: pointer; border-radius: 22px; }
+.stars-input button:hover svg:not(.on) { fill: rgba(255,255,255,.3); }
+.stars-input svg { width: 28px; height: 28px; transition: transform .12s ease-out; }
+.stars-input button:active svg { transform: scale(.85); }
+.rate-record { display: flex; flex-direction: column; gap: 4px; }
+.rate-record .bad { color: #ffb4ab; }
+
+/* ---------- record page: rating, tracks, credits, pressing details */
+.copy-rating { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: -4px 0 0; }
+.community { margin: 0; font-size: 15px; }
+.release-sections { margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 18px; align-items: start; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+.panel-head h2 { margin: 0; }
+.tracks { list-style: none; margin: 0; padding: 0; }
+.track { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: baseline; padding: 11px 0; border-top: 1px solid rgba(255,255,255,.08); font-size: 16px; line-height: 1.3; }
+.tracks > .track:first-child, .tracks > .track-heading:first-child { border-top: 0; }
+.track-pos { color: var(--sub); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.track-title .sub { font-size: 14px; }
+.track-time { color: var(--sub); font-size: 14px; font-variant-numeric: tabular-nums; }
+.track-heading { padding: 16px 0 6px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--amber); border-top: 1px solid rgba(255,255,255,.08); }
+.tracks.nested { margin-top: 6px; }
+.tracks.nested .track { padding: 6px 0; font-size: 14px; border-top: 0; grid-template-columns: 40px 1fr auto; }
+.credits, .id-list { margin: 0; display: flex; flex-direction: column; }
+.credits > div, .id-list > div { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 12px; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.08); }
+.credits > div:first-child, .id-list > div:first-child { border-top: 0; }
+.credits dt, .id-list dt { color: var(--sub); font-size: 14px; }
+.credits dd, .id-list dd { margin: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.id-list dd { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.notes { margin: 0; white-space: pre-line; line-height: 1.5; color: var(--sub); overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .credits > div, .id-list > div { grid-template-columns: 1fr; gap: 2px; }
+}
+.tag.tag-inline { position: static; flex: 0 0 auto; align-self: center; }

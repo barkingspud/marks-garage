@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { GRADE_LABELS, MEDIA_GRADES, parseGrade, type Grade } from '../../../shared/conditions';
 import { buyerPrice, DEFAULT_CRITERIA, type MatchCriteria } from '../../../shared/matching';
 import type { MatchResult } from '../../../shared/api-types';
 import { Cover } from '../components/Cover';
 import { DiscProgress, Empty, ErrorBox, GradeChip, PageHeader, money } from '../components/ui';
 import { useRoom } from '../room';
-import { load, save } from '../storage';
+import { load, save, whenText } from '../storage';
 import { useJob } from '../useJob';
 
 interface Saved { sellers: string[]; criteria: MatchCriteria; maxPages: number }
@@ -16,7 +17,7 @@ export function Match() {
   // Keep the raw text so commas can be typed; the parsed list goes into the criteria.
   const [shipsText, setShipsText] = useState(() => cfg.criteria.shipsFrom.join(', '));
   const [editing, setEditing] = useState(false);
-  const { job, error, running, start } = useJob<MatchResult>('match');
+  const { result, finishedAt, progress, error, running, start } = useJob<MatchResult>('match');
   useRoom(null, 268);
 
   const update = (patch: Partial<Saved>) => setCfg((c) => { const n = { ...c, ...patch }; save('match', n); return n; });
@@ -28,7 +29,6 @@ export function Match() {
   }
   const run = () => { setEditing(false); void start({ sellers: cfg.sellers, criteria: cfg.criteria, maxPagesPerSeller: cfg.maxPages }); };
 
-  const result = job?.status === 'done' ? job.result : undefined;
   const showSetup = !running && (!result || editing);
   const c = cfg.criteria;
   const rules = [
@@ -41,9 +41,12 @@ export function Match() {
 
   return (
     <div className="page" style={{ maxWidth: 900 }}>
+      <Link className="btn back" to="/wantlist">
+        <svg viewBox="0 0 24 24" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>Wantlist
+      </Link>
       <PageHeader
-        title="Sellers"
-        sub={result && !editing ? `${new Set(result.matches.map((m) => m.listing.release.id)).size} of your ${result.wantsCount} wants found in ${result.sellers.filter((s) => !s.error).length} shop${result.sellers.length === 1 ? '' : 's'}` : 'Look for your wants in the shops you trust.'}
+        title="Favorite shops"
+        sub={result && !editing ? `${new Set(result.matches.map((m) => m.listing.release.id)).size} of your ${result.wantsCount} wants found in ${result.sellers.filter((s) => !s.error).length} shop${result.sellers.length === 1 ? '' : 's'}${finishedAt ? `, scanned ${whenText(finishedAt)}` : ''}` : 'Look for your wants in the Discogs shops you trust. Add their seller names once; they\'re remembered.'}
       >
         {result && !editing && !running && (
           <>
@@ -99,9 +102,9 @@ export function Match() {
         </>
       )}
 
-      {running && job && (
+      {progress && (
         <section className="glass panel">
-          <DiscProgress {...job.progress} />
+          <DiscProgress {...progress} />
           <p className="sub" style={{ textAlign: 'center' }}>Keeping copies with {rules.join(', ')}.</p>
         </section>
       )}

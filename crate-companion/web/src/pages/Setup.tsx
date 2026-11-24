@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, mode, type Status } from '../api';
+import { forgetJobResults } from '../useJob';
 
 /** Shown when no Discogs account is connected. */
 export function Setup({ status, error: startError }: { status: Status; error?: string | null }) {
@@ -58,7 +59,7 @@ export function Setup({ status, error: startError }: { status: Status; error?: s
           )}
 
           {mode === 'local' && (
-            <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => api.setDemo(true)}>Look around with demo data</button>
+            <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => { forgetJobResults(); api.setDemo(true); }}>Look around with demo data</button>
           )}
         </div>
       </main>
