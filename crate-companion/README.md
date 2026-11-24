@@ -72,6 +72,32 @@ bash:
 DISCOGS_ENV_FILE="/path/to/.env" npm run dev
 ```
 
+## Android app
+
+The Android app runs everything on the phone: no PC or server needed. GitHub builds it
+automatically (workflow: `.github/workflows/crate-companion-android.yml`).
+
+**Install it on your phone (debug build):**
+
+1. On GitHub, open **Actions**, then **Crate Companion Android**, then the latest green run.
+2. Under **Artifacts**, download `crate-companion-debug-…` and unzip it.
+3. Copy the `.apk` to your phone and open it. Android asks to allow installing apps from
+   that source (your browser or file manager) the first time.
+
+**Repository secrets** (Settings, Secrets and variables, Actions):
+
+| Secret | What it's for |
+|---|---|
+| `DISCOGS_CONSUMER_KEY`, `DISCOGS_CONSUMER_SECRET` | "Connect with Discogs" in the app. Without them the app offers personal-token sign-in and demo data. |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Signed release builds (APK and Play Store AAB). |
+
+Locally, with Android Studio installed: `npm run android:sync`, then `npm run android:open`.
+
+How it fits together: `capacitor.config.ts` (app ID `io.github.barkingspud.cratecompanion`),
+`android/` (the Android project), `web/src/native/capacitor.ts` (the bridge: native networking,
+on-device storage, the Discogs sign-in returning to `cratecompanion://auth`, Google's barcode
+scanner, keep-awake during scans), `assets/` (icon and launch-screen sources).
+
 ## Scripts
 
 | Command | What it does |
@@ -82,6 +108,7 @@ DISCOGS_ENV_FILE="/path/to/.env" npm run dev
 | `npm test` | Unit tests for grading, matching, recommendations and services |
 | `npm run typecheck` | TypeScript check |
 | `npm run build` then `npm start` | Production build served by the API server on port 8787 |
+| `npm run android:sync` | Build the web app and copy it into the Android project |
 
 ## How it works
 

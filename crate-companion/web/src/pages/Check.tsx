@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MEDIA_GRADES } from '../../../shared/conditions';
 import type { SearchResult } from '../../../shared/discogs-types';
-import { api } from '../api';
+import { api, native } from '../api';
 import { Cover } from '../components/Cover';
 import { ICONS } from '../components/Layout';
 import { Empty, ErrorBox, Loading, PageHeader, money } from '../components/ui';
@@ -21,6 +21,18 @@ export function Check() {
   const [media, setMedia] = useState('VG+');
   const [sleeve, setSleeve] = useState('VG+');
   const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  /** The app uses Google's native scanner; browsers fall back to the camera in the page. */
+  async function scan() {
+    setScanError(null);
+    if (!native?.scanBarcode) { setScanning(true); return; }
+    try {
+      const code = await native.scanBarcode();
+      if (code) { setText(code); submit(code); }
+    } catch (e) {
+      setScanError((e as Error).message);
+    }
+  }
 
   const coll = useQuery({ queryKey: ['collection', 0], queryFn: () => api.collection(0) });
   const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
@@ -65,11 +77,12 @@ export function Check() {
           <span className="sr-only">Artist and title, catalog number or barcode</span>
           <input type="search" inputMode="search" placeholder="Artist and title, cat# or barcode" value={text} onChange={(e) => setText(e.target.value)} />
         </label>
-        <button type="button" className="btn icon" aria-label="Scan barcode" onClick={() => setScanning(true)}>
+        <button type="button" className="btn icon" aria-label="Scan barcode" onClick={() => void scan()}>
           <svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg>
         </button>
         <button type="submit" className="btn primary" disabled={!text.trim()}>Find</button>
       </form>
+      <ErrorBox error={scanError} />
       {scanning && <Scanner onCode={(c) => { setScanning(false); setText(c); submit(c); }} onClose={() => setScanning(false)} />}
 
       {search.isFetching && <Loading label="Searching Discogs…" />}
@@ -150,6 +163,7 @@ function Scanner({ onCode, onClose }: { onCode: (c: string) => void; onClose: ()
   const [msg, setMsg] = useState('Point the camera at the barcode.');
   useEffect(() => {
     const Detector = (window as unknown as { BarcodeDetector?: new (o: object) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector;
+    if (!window.isSecureContext) { setMsg('The camera only works over a secure (https) connection. Type the numbers under the barcode instead, or use the Android app.'); return; }
     if (!Detector || !navigator.mediaDevices?.getUserMedia) { setMsg("This browser can't scan barcodes. Type the numbers under the barcode instead."); return; }
     let stream: MediaStream | undefined; let timer = 0; let stopped = false;
     const detector = new Detector({ formats: ['ean_13', 'upc_a', 'ean_8', 'upc_e'] });

@@ -1,6 +1,6 @@
 {
   "name": "crate-companion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Track your record collection and wantlist, match wants to sellers, and get recommendations — powered by the Discogs API.",
   "type": "module",
@@ -14,9 +14,18 @@
     "build": "tsc -b && vite build",
     "start": "cross-env NODE_ENV=production tsx server/index.ts",
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "vitest run",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor-mlkit/barcode-scanning": "^8.2.2",
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/preferences": "^8.0.1",
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@hono/node-server": "^1.19.19",
     "@tanstack/react-query": "^5.108.4",
@@ -27,6 +36,7 @@
     "react-router-dom": "^6.30.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "@types/node": "^22.20.5",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
