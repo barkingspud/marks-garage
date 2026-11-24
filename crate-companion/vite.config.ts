@@ -11,5 +11,5 @@ export default defineConfig({
     // server can send Discogs' sign-in back to this page rather than to port 8787.
     proxy: { '/api': { target: 'http://localhost:8787', xfwd: true } },
   },
-  test: { root: '.', include: ['server/**/*.test.ts', 'core/**/*.test.ts', 'shared/**/*.test.ts'] },
+  test: { root: '.', include: ['server/**/*.test.ts', 'core/**/*.test.ts', 'shared/**/*.test.ts', 'web/src/**/*.test.ts'] },
 } as never);

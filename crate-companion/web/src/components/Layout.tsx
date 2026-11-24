@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { api, mode, type Status } from '../api';
 import { RoomProvider } from '../room';
 import { DisconnectButton } from './Disconnect';
+import { forgetJobResults } from '../useJob';
 
 const ICONS = {
   home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -41,7 +42,7 @@ export function Layout({ status }: { status: Status }) {
                 <NavLink to="/check" className="btn"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg>Check a record</NavLink>
                 <div className="who">
                   {status.mock ? <span>Demo data</span> : status.username && <span>Signed in as <b>{status.username}</b></span>}
-                  {status.mock && mode === 'local' && <button className="btn small" onClick={() => api.setDemo(false)}>Leave demo</button>}
+                  {status.mock && mode === 'local' && <button className="btn small" onClick={() => { forgetJobResults(); api.setDemo(false); }}>Leave demo</button>}
                   {(status.auth?.method === 'oauth' || (mode === 'local' && status.auth?.method)) && <DisconnectButton />}
                 </div>
               </div>

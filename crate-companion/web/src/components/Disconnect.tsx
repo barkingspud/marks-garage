@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
+import { forgetJobResults } from '../useJob';
 
 /** Forget the connected Discogs account and go back to the connect page. */
 export function DisconnectButton() {
@@ -8,6 +9,7 @@ export function DisconnectButton() {
     mutationFn: api.disconnect,
     onSuccess: () => {
       qc.clear(); // cached data belongs to the old account
+      forgetJobResults();
       void qc.invalidateQueries({ queryKey: ['status'] });
     },
   });

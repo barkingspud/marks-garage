@@ -1,24 +1,32 @@
-import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import type { RecommendResult } from '../../../shared/api-types';
 import type { Recommendation } from '../../../shared/recommend';
 import { api } from '../api';
 import { Cover } from '../components/Cover';
 import { DiscProgress, ErrorBox, PageHeader, ScoreRing, discogsUrl } from '../components/ui';
 import { useRoom } from '../room';
+import { whenText } from '../storage';
 import { useJob } from '../useJob';
 
 const key = (r: Recommendation) => (r.masterId ? `m${r.masterId}` : `r${r.releaseId}`);
 const link = (r: Recommendation) => (r.masterId ? discogsUrl('master', r.masterId) : discogsUrl('release', r.releaseId!));
 
 export function Discover() {
-  const { job, error, running, start } = useJob<RecommendResult>('recommend');
-  const [added, setAdded] = useState<Set<string>>(new Set());
+  const { result, finishedAt, progress, error, running, start } = useJob<RecommendResult>('recommend');
+  const qc = useQueryClient();
+  const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
+  const [justAdded, setJustAdded] = useState<Set<string>>(new Set());
   const add = useMutation({
     mutationFn: (r: Recommendation) => api.addWant({ releaseId: r.releaseId, masterId: r.masterId }),
-    onSuccess: (_d, r) => setAdded((s) => new Set(s).add(key(r))),
+    onSuccess: (_d, r) => { setJustAdded((s) => new Set(s).add(key(r))); void qc.invalidateQueries({ queryKey: ['wants'] }); },
   });
-  const result = job?.status === 'done' ? job.result : undefined;
+  // Picks are kept between visits, so check the wantlist too, not only what was added just now.
+  const added = useMemo(() => {
+    const s = new Set(justAdded);
+    for (const w of wants.data?.items ?? []) { s.add(`r${w.id}`); if (w.basic_information.master_id) s.add(`m${w.basic_information.master_id}`); }
+    return { has: (k: string) => s.has(k) };
+  }, [justAdded, wants.data]);
   const [top, ...rest] = result?.recommendations ?? [];
   useRoom(top?.thumb ?? null, 32);
 
@@ -30,13 +38,13 @@ export function Discover() {
 
   return (
     <div className="page" style={{ maxWidth: 900 }}>
-      <PageHeader title="Picked for you" sub={result ? `From the ${result.profile.total.toLocaleString()} records you own` : 'Records you don’t own yet, chosen from the artists, labels and styles you collect.'}>
+      <PageHeader title="Picked for you" sub={result ? `From the ${result.profile.total.toLocaleString()} records you own${finishedAt ? `, picked ${whenText(finishedAt)}` : ''}` : 'Records you don’t own yet, chosen from the artists, labels and styles you collect.'}>
         {!running && <button className="btn primary" onClick={() => start()}>{result ? 'Pick again' : 'Find records for me'}</button>}
       </PageHeader>
-      {running && job && <section className="glass panel"><DiscProgress {...job.progress} /></section>}
+      {progress && <section className="glass panel"><DiscProgress {...progress} /></section>}
       <ErrorBox error={error ?? add.error} />
 
-      {result && (
+      {result && !running && (
         <>
           <div className="chip-row" role="list" aria-label="Your taste">
             {taste.map((t) => <span role="listitem" key={t} className="chip static">{t}</span>)}
@@ -51,7 +59,7 @@ export function Discover() {
                 <p>{top.reasons.slice(0, 2).map((r) => r.charAt(0).toUpperCase() + r.slice(1)).join('. ')}.</p>
                 <div className="page-actions">
                   <button className="btn primary" disabled={added.has(key(top)) || add.isPending} onClick={() => add.mutate(top)}>
-                    {added.has(key(top)) ? 'Added to wantlist' : 'Add to wantlist'}
+                    {added.has(key(top)) ? 'On your wantlist' : 'Add to wantlist'}
                   </button>
                 </div>
               </div>

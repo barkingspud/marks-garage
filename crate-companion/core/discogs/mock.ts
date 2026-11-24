@@ -1,5 +1,5 @@
 import type {
-  ArtistRelease, BasicInformation, CollectionItem, LabelRelease, Listing, Pagination, SearchResult, WantItem,
+  ArtistRelease, BasicInformation, CollectionItem, LabelRelease, Listing, Pagination, ReleaseDetails, SearchResult, WantItem,
 } from '../../shared/discogs-types';
 import type { DiscogsApi, SearchParams } from './api';
 
@@ -162,6 +162,38 @@ export class MockDiscogs implements DiscogsApi {
     if (b && !collection.some((c) => c.id === releaseId)) {
       collection = [{ id: b.id, instance_id: 80000 + collection.length, folder_id: 1, rating: 0, date_added: new Date().toISOString(), basic_information: b }, ...collection];
     }
+  }
+  async setRating(_u: string, _f: number, releaseId: number, instanceId: number, rating: number) {
+    collection = collection.map((c) => (c.id === releaseId && c.instance_id === instanceId ? { ...c, rating } : c));
+  }
+  async release(releaseId: number): Promise<ReleaseDetails> {
+    await delay();
+    const b = catalog.find((c) => c.id === releaseId);
+    if (!b) throw Object.assign(new Error('Release not found'), { status: 404 });
+    const words = ['Morning', 'Static', 'Harbor', 'Glass', 'Undertow', 'Lanterns', 'Second Hand', 'Northbound', 'Velvet', 'Low Tide'];
+    const tracklist = Array.from({ length: 8 }, (_, i) => ({
+      position: `${i < 4 ? 'A' : 'B'}${(i % 4) + 1}`, type_: 'track',
+      title: `${words[(releaseId + i * 3) % words.length]}${i % 3 === 0 ? '' : ` ${words[(releaseId + i) % words.length]}`}`,
+      duration: `${3 + ((releaseId + i) % 4)}:${String((releaseId * 7 + i * 13) % 60).padStart(2, '0')}`,
+    }));
+    const cat = b.labels[0]?.catno ?? '';
+    return {
+      id: b.id, master_id: b.master_id, title: b.title, year: b.year, country: 'US', released: String(b.year),
+      released_formatted: String(b.year), artists: b.artists, labels: b.labels, formats: b.formats,
+      genres: b.genres, styles: b.styles, tracklist,
+      extraartists: [
+        { id: 9001, name: 'Sam Lowe', role: 'Producer' },
+        { id: 9002, name: 'Ada Reyes', role: 'Engineer' },
+        { id: 9003, name: 'Theo Marsh', role: 'Design [Sleeve], Photography By' },
+      ],
+      identifiers: [
+        { type: 'Barcode', value: `0 7502${String(b.id).padStart(5, '0')} 1` },
+        { type: 'Matrix / Runout', value: `${cat}-A-1`, description: 'Side A' },
+        { type: 'Matrix / Runout', value: `${cat}-B-1`, description: 'Side B' },
+      ],
+      notes: 'Demo data. Gatefold sleeve with printed inner sleeve.',
+      community: { ...b.community, rating: { count: 40 + (b.id % 200), average: 3.6 + (b.id % 14) / 10 } },
+    };
   }
   async collectionFields() {
     return { fields: [

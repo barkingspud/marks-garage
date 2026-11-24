@@ -1,6 +1,6 @@
 import type {
   ArtistRelease, CollectionField, CollectionFolder, CollectionItem, Identity, LabelRelease, Listing,
-  MarketplaceStats, Pagination, SearchResult, UserProfile, WantItem,
+  MarketplaceStats, Pagination, ReleaseDetails, SearchResult, UserProfile, WantItem,
 } from '../../shared/discogs-types';
 
 export type Paged<K extends string, T> = { pagination: Pagination } & { [P in K]: T[] };
@@ -43,6 +43,10 @@ export interface DiscogsApi {
   addToCollection(username: string, releaseId: number): Promise<void>;
   collectionFields(username: string): Promise<{ fields: CollectionField[] }>;
   removeWant(username: string, releaseId: number): Promise<void>;
+  /** Rate a record in the collection, 1 to 5 stars (0 clears it). */
+  setRating(username: string, folderId: number, releaseId: number, instanceId: number, rating: number): Promise<void>;
+  /** Everything about one pressing: track listing, credits, runout numbers, notes. */
+  release(releaseId: number): Promise<ReleaseDetails>;
   marketplaceStats(releaseId: number, currency?: string): Promise<MarketplaceStats>;
   inventoryPage(username: string, page: number, perPage?: number): Promise<Paged<'listings', Listing>>;
   artistReleases(artistId: number, page?: number, perPage?: number): Promise<Paged<'releases', ArtistRelease>>;

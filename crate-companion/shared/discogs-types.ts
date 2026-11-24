@@ -153,3 +153,43 @@ export interface SearchResult {
   cover_image?: string;
   community?: { want: number; have: number };
 }
+
+export interface Track {
+  position: string;
+  /** "track", or "heading" / "index" for section titles and grouped tracks. */
+  type_: string;
+  title: string;
+  duration?: string;
+  artists?: ArtistRef[];
+  extraartists?: Credit[];
+  sub_tracks?: Track[];
+}
+
+/** A credit, e.g. { name: "Ken Scott", role: "Producer" }. `tracks` limits it to some tracks. */
+export interface Credit { id: number; name: string; anv?: string; role: string; tracks?: string }
+
+/** /releases/{id}: everything about one pressing. */
+export interface ReleaseDetails {
+  id: number;
+  master_id?: number;
+  title: string;
+  year?: number;
+  country?: string;
+  released?: string;
+  released_formatted?: string;
+  artists: ArtistRef[];
+  labels: LabelRef[];
+  companies?: (LabelRef & { entity_type_name?: string })[];
+  formats: FormatRef[];
+  genres?: string[];
+  styles?: string[];
+  tracklist: Track[];
+  extraartists?: Credit[];
+  identifiers?: { type: string; value: string; description?: string }[];
+  notes?: string;
+  images?: { type: string; uri: string; uri150?: string; width?: number; height?: number }[];
+  thumb?: string;
+  community?: { have: number; want: number; rating?: { count: number; average: number } };
+  num_for_sale?: number;
+  lowest_price?: number | null;
+}

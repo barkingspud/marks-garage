@@ -1,5 +1,5 @@
 import type { MatchResult, RecommendResult } from '../shared/api-types';
-import type { CollectionField, CollectionFolder, CollectionItem, MarketplaceStats, SearchResult, UserProfile, WantItem } from '../shared/discogs-types';
+import type { CollectionField, CollectionFolder, CollectionItem, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../shared/discogs-types';
 import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
 import { DiscogsConnection, type ConnectionStatus } from './auth/connection';
 import type { Consumer } from './auth/oauth';
@@ -100,6 +100,22 @@ export class CrateCore {
 
   async removeWant(releaseId: number): Promise<{ ok: true }> {
     await this.api.removeWant(await this.me(), releaseId);
+    return { ok: true };
+  }
+
+  /** Track listing, credits, runout numbers and notes for one pressing. */
+  async release(releaseId: number): Promise<ReleaseDetails> {
+    if (!releaseId) throw new CrateError(400, 'releaseId required');
+    return this.api.release(releaseId);
+  }
+
+  /** Rate a record you own: 1 to 5 stars, or 0 to clear. */
+  async rate(p: { releaseId: number; instanceId: number; folderId: number; rating: number }): Promise<{ ok: true }> {
+    const { releaseId, instanceId, folderId, rating } = p;
+    if (!releaseId || !instanceId) throw new CrateError(400, 'releaseId and instanceId required');
+    if (!Number.isInteger(rating) || rating < 0 || rating > 5) throw new CrateError(400, 'Rating must be 0 to 5 stars');
+    // Discogs needs the record's real folder; "All" (0) isn't one, so fall back to Uncategorized.
+    await this.api.setRating(await this.me(), folderId || 1, releaseId, instanceId, rating);
     return { ok: true };
   }
 

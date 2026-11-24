@@ -1,7 +1,7 @@
 import type { ConnectionStatus } from '../../core/auth/connection';
 import type { KeyValueStore } from '../../core/auth/store';
 import type { CrateCore, Job as CoreJob, Status as CoreStatus } from '../../core/crate';
-import type { CollectionField, CollectionFolder, CollectionItem, MarketplaceStats, SearchResult, UserProfile, WantItem } from '../../shared/discogs-types';
+import type { CollectionField, CollectionFolder, CollectionItem, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../../shared/discogs-types';
 
 /**
  * Two ways to run:
@@ -120,6 +120,9 @@ export const api = {
   addToCollection: (releaseId: number, removeFromWants: boolean) =>
     L ? local((c) => c.addToCollection(releaseId, removeFromWants))
       : call<{ ok: true }>('/collection', { method: 'POST', body: JSON.stringify({ releaseId, removeFromWants }) }),
+  release: (releaseId: number) => (L ? local((c) => c.release(releaseId)) : call<ReleaseDetails>(`/releases/${releaseId}`)),
+  rate: (p: { releaseId: number; instanceId: number; folderId: number; rating: number }) =>
+    L ? local((c) => c.rate(p)) : call<{ ok: true }>('/collection/rating', { method: 'POST', body: JSON.stringify(p) }),
   searchReleases: (p: { q?: string; barcode?: string; catno?: string }) =>
     L ? local((c) => c.searchReleases(p))
       : call<{ total: number; results: SearchResult[] }>(`/search/releases?${new URLSearchParams(Object.entries(p).filter(([, v]) => v) as [string, string][])}`),

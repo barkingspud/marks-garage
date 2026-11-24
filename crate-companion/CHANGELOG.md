@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+**Record details, ratings and kept results.**
+
+- Record pages show the track listing (with running time), credits, the barcode and runout
+  etchings that identify the pressing, notes, and the Discogs community rating.
+- Any pressing can be opened, not just ones you own or want, with Add to wantlist.
+- Rate your records (1 to 5 stars) on the record page and in the collection side panel.
+  Ratings save to Discogs and show in the collection list view.
+- The wantlist has a list view, like the collection.
+- Recommendations and seller scans keep running when you switch pages, and the last result
+  is kept until you run it again (also after closing the app).
+
 **Android app (0.2.0).**
 
 - Crate Companion as an installable Android app that runs entirely on the phone.
