@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { albumOfTheDay, anotherAlbum, storyFor } from '../albumOfTheDay';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { Cover } from '../components/Cover';
@@ -19,8 +21,12 @@ export function Home() {
   const coll = useQuery({ queryKey: ['collection', 0], queryFn: () => api.collection(0) });
   const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
 
-  const latest = [...(coll.data?.items ?? [])].sort((a, b) => b.date_added.localeCompare(a.date_added));
-  const lead = latest[0];
+  const items = coll.data?.items;
+  const latest = useMemo(() => [...(items ?? [])].sort((a, b) => b.date_added.localeCompare(a.date_added)), [items]);
+  const today = useMemo(() => albumOfTheDay(items ?? []), [items]);
+  // The shuffle button swaps in another album for this visit; tomorrow brings a new one.
+  const [shuffled, setShuffled] = useState<number | null>(null);
+  const lead = (shuffled !== null && items?.find((i) => i.instance_id === shuffled)) || today;
   useRoom(lead?.basic_information.cover_image || lead?.basic_information.thumb);
 
   if (me.isLoading) return <Loading />;
@@ -45,17 +51,24 @@ export function Home() {
       {coll.isLoading && <Loading label="Pulling your latest albums…" />}
       <ErrorBox error={coll.error} />
       {b && (
-        <section className="home-hero" aria-label="Last added">
+        <section className="home-hero" aria-label={shuffled ? 'Shuffled album' : 'Album of the day'}>
           <Link to={`/record/${b.id}`} aria-label={`${b.title} by ${artistLine(b)}. Open album.`}>
             <RecordHero src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={b.labels[0]?.name} />
           </Link>
           <div className="home-hero-text">
-            <span className="sub">Last added, {new Date(lead!.date_added).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+            <span className="hero-kicker">
+              <span className="amber">{shuffled ? 'Shuffled' : 'Album of the day'}</span>
+              <span className="sub">{storyFor(lead!)}</span>
+            </span>
             <h2>{b.title}</h2>
             <span className="artist">{artistLine(b)}{b.year ? `, ${b.year}` : ''}</span>
             {b.labels[0] && <span className="sub">{b.labels[0].name} {b.labels[0].catno}</span>}
             <div className="page-actions" style={{ marginTop: 10 }}>
               <Link to={`/record/${b.id}`} className="btn primary">Open album</Link>
+              <button className="btn icon" aria-label="Show another album" title="Show another album"
+                onClick={() => setShuffled(anotherAlbum(items ?? [], lead)?.instance_id ?? null)}>
+                <svg viewBox="0 0 24 24" aria-hidden><path d="M4 7h3c5 0 5 10 10 10h3M17 14l3 3-3 3M4 17h3c1.6 0 2.7-1 3.6-2.4M13.4 9.4C14.3 8 15.4 7 17 7h3M17 4l3 3-3 3" /></svg>
+              </button>
               <Link to="/collection" className="btn">All {(profile.num_collection ?? 0).toLocaleString()} albums</Link>
             </div>
           </div>
@@ -68,7 +81,7 @@ export function Home() {
         <section aria-labelledby="h-recent">
           <div className="section-head"><h2 id="h-recent">Recently added</h2><Link to="/collection">See all</Link></div>
           <ul className="strip">
-            {latest.slice(1, 7).map((i) => {
+            {latest.slice(0, 6).map((i) => {
               const r = i.basic_information;
               return (
                 <li key={i.instance_id}>

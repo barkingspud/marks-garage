@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Home features an **Album of the day** instead of the last album added: a different album each
+  day, favoring 5- and 4-star albums, with a line on why ("Added to your collection on this day
+  in 2019", "Turns 50 this year", "One of your 5-star albums"). A shuffle button shows another.
+
 - Long album titles in lists wrap to two lines instead of running off the screen.
 - AI recommendations show an album's original year (Discogs search can give a reissue's year).
 
