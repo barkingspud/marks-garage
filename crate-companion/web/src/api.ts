@@ -84,7 +84,7 @@ function core(): Promise<CrateCore> {
     try { demo = localStorage.getItem('crate:demo') === '1'; } catch { /* ignore */ }
     return CrateCore.create({
       mock: demo,
-      userAgent: 'CrateCompanion/0.3 +https://github.com/barkingspud/marks-garage',
+      userAgent: 'CrateCompanion/1.0 +https://github.com/barkingspud/marks-garage',
       fetch: native?.fetch,
       store: native?.store ?? new BrowserStore(),
       consumer: key && secret ? { key, secret } : undefined,

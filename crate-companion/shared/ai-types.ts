@@ -16,6 +16,8 @@ export interface AiStatus {
   model: AiModelId;
   /** The included AI's allowance as last seen, when it's from this month. */
   allowance?: { used: number; limit: number; resetsOn: string };
+  /** The random ID the AI server counts this install's uses by, once there is one (for privacy requests). */
+  installId?: string;
 }
 
 export type AiFeature = 'identify' | 'recommend' | 'review' | 'notes' | 'tonight';

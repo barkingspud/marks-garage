@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 (November 24, 2026)
+
+The first Play Store release.
+
+- **Privacy.** A privacy policy (linked in Settings, next to your install ID). The AI server no
+  longer stores network addresses, only a daily-changing hash used to count requests.
 
 - **Full-screen artwork.** Tap the cover on an album page to see every image Discogs has for that
   release (front, back, labels, inserts). Swipe between them, pinch or double-tap to zoom, drag
