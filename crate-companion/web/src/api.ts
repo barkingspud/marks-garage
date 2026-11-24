@@ -1,5 +1,5 @@
 import type { ConnectionStatus } from '../../core/auth/connection';
-import type { AiStatus, AlbumNotes, ListingReview, TonightResult } from '../../shared/ai-types';
+import type { AiStatus, AiUsageReport, AlbumNotes, ListingReview, TonightResult } from '../../shared/ai-types';
 import type { KeyValueStore } from '../../core/auth/store';
 import type { CrateCore, Job as CoreJob, Status as CoreStatus } from '../../core/crate';
 import type { CollectionField, CollectionFolder, CollectionItem, Listing, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../../shared/discogs-types';
@@ -146,6 +146,9 @@ export const api = {
     status: () => (L ? local((c) => c.aiStatus()) : call<AiStatus>('/ai/status')),
     setKey: (key: string) => (L ? local((c) => c.aiSetKey(key)) : call<AiStatus>('/ai/key', { method: 'POST', body: JSON.stringify({ key }) })),
     removeKey: () => (L ? local((c) => c.aiRemoveKey()) : call<AiStatus>('/ai/key', { method: 'DELETE' })),
+    setModel: (model: string) => (L ? local((c) => c.aiSetModel(model)) : call<AiStatus>('/ai/model', { method: 'POST', body: JSON.stringify({ model }) })),
+    usage: () => (L ? local((c) => c.aiUsage()) : call<AiUsageReport>('/ai/usage')),
+    clearUsage: () => (L ? local((c) => c.aiClearUsage()) : call<AiUsageReport>('/ai/usage', { method: 'DELETE' })),
     review: (listings: Listing[]) => (L ? local((c) => c.aiReviewListings({ listings })) : call<ListingReview>('/ai/review', { method: 'POST', body: JSON.stringify({ listings }) })),
     notes: (releaseId: number) => (L ? local((c) => c.aiNotes(releaseId)) : call<AlbumNotes>(`/ai/notes/${releaseId}`)),
     tonight: (mood: string) => (L ? local((c) => c.aiTonight({ mood })) : call<TonightResult>('/ai/tonight', { method: 'POST', body: JSON.stringify({ mood }) })),

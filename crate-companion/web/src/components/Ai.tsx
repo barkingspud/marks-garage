@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { AI_MODELS, modelInfo } from '../../../shared/ai-models';
+import type { AiFeature } from '../../../shared/ai-types';
 import { ErrorBox } from './ui';
 
 export const SPARKLE = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z';
@@ -44,7 +46,7 @@ export function AiKeyForm() {
   if (on && !editing) {
     return (
       <div className="ai-key">
-        <p><span className="status yes">AI is on</span> <span className="sub small">Using {s.data!.model}.</span></p>
+        <p><span className="status yes">AI is on</span> <span className="sub small">Using {modelInfo(s.data!.model)?.name ?? s.data!.model}.</span></p>
         <div className="page-actions">
           <button className="btn small" onClick={() => setEditing(true)}>Replace key</button>
           <button className="btn small danger" disabled={remove.isPending}
@@ -72,5 +74,97 @@ export function AiKeyForm() {
       </div>
       <ErrorBox error={save.error} />
     </form>
+  );
+}
+
+/** Pick the model the AI features use. */
+export function ModelPicker() {
+  const qc = useQueryClient();
+  const s = useAiStatus();
+  const set = useMutation({
+    mutationFn: api.ai.setModel,
+    onSuccess: (d) => qc.setQueryData(['ai-status'], d),
+  });
+  const current = s.data?.model;
+  return (
+    <fieldset className="model-picker">
+      <legend>Model</legend>
+      {AI_MODELS.map((m) => (
+        <label key={m.id} className={`model-option glass${current === m.id ? ' on' : ''}`}>
+          <input type="radio" name="ai-model" value={m.id} checked={current === m.id} disabled={set.isPending}
+            onChange={() => set.mutate(m.id)} />
+          <span>
+            <b>{m.name}</b> <span className="sub small">{m.perUse}</span>
+            <span className="sub small model-blurb">{m.blurb}</span>
+          </span>
+        </label>
+      ))}
+      <ErrorBox error={set.error} />
+    </fieldset>
+  );
+}
+
+const FEATURE_NAMES: Record<AiFeature, string> = {
+  identify: 'Identify from photos',
+  recommend: 'Recommendations',
+  review: 'Listing reviews',
+  notes: 'Album notes',
+  tonight: 'Tonight’s picks',
+};
+
+/** Dollars, with fractions of a cent for small amounts. */
+export function cost(n: number): string {
+  if (n === 0) return '$0';
+  if (n < 0.01) return `${(n * 100).toFixed(2)}¢`;
+  if (n < 1) return `${(n * 100).toFixed(1)}¢`;
+  return `$${n.toFixed(2)}`;
+}
+
+/** What the AI has cost on this device, overall and per use, by feature and model. */
+export function CostMeter() {
+  const qc = useQueryClient();
+  const usage = useQuery({ queryKey: ['ai-usage'], queryFn: api.ai.usage });
+  const clear = useMutation({
+    mutationFn: api.ai.clearUsage,
+    onSuccess: (d) => qc.setQueryData(['ai-usage'], d),
+  });
+  const u = usage.data;
+  if (usage.error) return <ErrorBox error={usage.error} />;
+  if (!u) return null;
+  const uses = (n: number) => `${n} ${n === 1 ? 'use' : 'uses'}`;
+  return (
+    <div className="cost-meter">
+      <div className="cost-totals">
+        <div><span className="sub small">This month</span><b>{cost(u.thisMonth.cost)}</b><span className="sub small">{uses(u.thisMonth.uses)}</span></div>
+        <div><span className="sub small">All time</span><b>{cost(u.total.cost)}</b><span className="sub small">{uses(u.total.uses)}</span></div>
+      </div>
+      {u.groups.length > 0 ? (
+        <table className="cost-table">
+          <thead><tr><th>Feature</th><th>Model</th><th>Uses</th><th>Per use</th></tr></thead>
+          <tbody>
+            {u.groups.map((g) => (
+              <tr key={`${g.feature}-${g.model}`}>
+                <td>{FEATURE_NAMES[g.feature] ?? g.feature}</td>
+                <td>{modelInfo(g.model)?.name ?? g.model}</td>
+                <td>{g.uses}</td>
+                <td>{cost(g.cost / g.uses)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="sub small">Nothing yet. Each use of an AI feature shows up here with what it cost.</p>
+      )}
+      <p className="sub small">
+        Worked out from the tokens Anthropic reports and its list prices, so it may differ slightly from your bill.
+        Your actual charges are on the Usage page at console.anthropic.com.
+      </p>
+      {u.total.uses > 0 && (
+        <button className="btn small" disabled={clear.isPending}
+          onClick={() => { if (confirm('Clear the cost history on this device?')) clear.mutate(); }}>
+          Clear history
+        </button>
+      )}
+    </div>
   );
 }

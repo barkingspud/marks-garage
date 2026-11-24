@@ -1,3 +1,4 @@
+import type { AiModelId } from './ai-models';
 import type { SearchResult } from './discogs-types';
 
 /** What the AI features return to the app. */
@@ -5,7 +6,38 @@ import type { SearchResult } from './discogs-types';
 export interface AiStatus {
   /** An Anthropic API key is saved. */
   configured: boolean;
+  /** The model the AI features use, chosen in Settings. */
+  model: AiModelId;
+}
+
+export type AiFeature = 'identify' | 'recommend' | 'review' | 'notes' | 'tonight';
+
+/** One use of an AI feature (it can take more than one request) and what it cost. */
+export interface AiUsageEntry {
+  at: string;
+  feature: AiFeature;
+  /** The model that answered. */
   model: string;
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** U.S. dollars, from Anthropic's list prices. */
+  cost: number;
+}
+
+export interface AiUsageGroup {
+  feature: AiFeature;
+  model: string;
+  uses: number;
+  cost: number;
+}
+
+export interface AiUsageReport {
+  thisMonth: { uses: number; cost: number };
+  total: { uses: number; cost: number };
+  /** Average cost per use, by feature and model, so models can be compared. */
+  groups: AiUsageGroup[];
+  recent: AiUsageEntry[];
 }
 
 export interface IdentifyResult {

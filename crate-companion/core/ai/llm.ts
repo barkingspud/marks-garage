@@ -1,9 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import type { z } from 'zod';
-
-/** The model every AI feature uses. */
-export const AI_MODEL = 'claude-opus-5-5';
+import type { AiModelId, TokenCounts } from '../../shared/ai-models';
 
 type Content = string | Anthropic.Beta.BetaContentBlockParam[];
 
@@ -17,18 +15,32 @@ export interface AskOptions<T extends z.ZodType> {
   maxTokens?: number;
 }
 
-/** One question to the AI, answered in the given shape. Injected so tests can fake it. */
+/** One question to the AI, answered in the given shape. What the features call; tests fake it. */
 export type Ask = <T extends z.ZodType>(o: AskOptions<T>) => Promise<z.infer<T>>;
 
-export interface AiBackend {
-  ask: Ask;
-  /** Checks the key works (a free request). */
-  check(): Promise<void>;
+/** What a request used: the model that answered (it can differ after a fallback) and its tokens. */
+export interface Usage {
+  model: string;
+  tokens: TokenCounts;
 }
+
+export interface AiBackend {
+  ask<T extends z.ZodType>(o: AskOptions<T>, model: AiModelId): Promise<{ output: z.infer<T>; usage?: Usage }>;
+  /** Checks the key works and can use the model (a free request). */
+  check(model: AiModelId): Promise<void>;
+}
+
+/** Opus and Sonnet can hand a request a safety check declined to another model; Haiku can't. */
+const HAS_FALLBACK: Record<AiModelId, boolean> = {
+  'claude-opus-5-5': true,
+  'claude-sonnet-5-5': true,
+  'claude-haiku-5-5': false,
+};
 
 /** An error the app can show as-is. `status` follows HTTP so the server can pass it on. */
 export class AiError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  /** A request that was answered but not usable still costs money; this is what it used. */
+  constructor(public status: number, message: string, public usage?: Usage) { super(message); }
 }
 
 function explain(e: unknown): AiError {
@@ -50,18 +62,17 @@ function explain(e: unknown): AiError {
 export function anthropicBackend(apiKey: string): AiBackend {
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true, maxRetries: 2, timeout: 3 * 60_000 });
   return {
-    async check() {
-      try { await client.models.retrieve(AI_MODEL); } catch (e) { throw explain(e); }
+    async check(model) {
+      try { await client.models.retrieve(model); } catch (e) { throw explain(e); }
     },
-    ask: async <T extends z.ZodType>(o: AskOptions<T>) => {
+    async ask<T extends z.ZodType>(o: AskOptions<T>, model: AiModelId) {
       let res;
       try {
         res = await client.beta.messages.parse({
-          model: AI_MODEL,
+          model,
           max_tokens: o.maxTokens ?? 16000,
           // If a safety check declines the request, let the API retry it on another model.
-          betas: ['server-side-fallback-2026-07-01'],
-          fallbacks: 'default',
+          ...(HAS_FALLBACK[model] ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
           output_config: { effort: o.effort ?? 'medium', format: betaZodOutputFormat(o.schema) },
           system: o.system,
           messages: [{ role: 'user', content: o.content }],
@@ -69,10 +80,20 @@ export function anthropicBackend(apiKey: string): AiBackend {
       } catch (e) {
         throw explain(e);
       }
-      if (res.stop_reason === 'refusal') throw new AiError(422, 'The AI declined to answer this one. Try wording it differently.');
-      if (res.stop_reason === 'max_tokens') throw new AiError(502, 'The AI ran out of room before finishing. Try a narrower request.');
-      if (res.parsed_output == null) throw new AiError(502, "The AI's answer couldn't be read. Try again.");
-      return res.parsed_output as z.infer<T>;
+      const u = res.usage;
+      const usage: Usage = {
+        model: res.model || model,
+        tokens: {
+          input: u?.input_tokens ?? 0,
+          output: u?.output_tokens ?? 0,
+          cacheRead: u?.cache_read_input_tokens ?? 0,
+          cacheWrite: u?.cache_creation_input_tokens ?? 0,
+        },
+      };
+      if (res.stop_reason === 'refusal') throw new AiError(422, 'The AI declined to answer this one. Try wording it differently.', usage);
+      if (res.stop_reason === 'max_tokens') throw new AiError(502, 'The AI ran out of room before finishing. Try a narrower request.', usage);
+      if (res.parsed_output == null) throw new AiError(502, "The AI's answer couldn't be read. Try again.", usage);
+      return { output: res.parsed_output as z.infer<T>, usage };
     },
   };
 }

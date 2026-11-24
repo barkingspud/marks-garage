@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, mode } from '../api';
-import { AiKeyForm, Sparkle } from '../components/Ai';
+import { AiKeyForm, CostMeter, ModelPicker, Sparkle, useAiStatus } from '../components/Ai';
 import { DisconnectButton } from '../components/Disconnect';
 import { PageHeader } from '../components/ui';
 import { useRoom } from '../room';
@@ -10,6 +10,7 @@ export function Settings() {
   const status = useQuery({ queryKey: ['status'], queryFn: api.status });
   useRoom(null, 220);
   const s = status.data;
+  const ai = useAiStatus();
   return (
     <div className="page" style={{ maxWidth: 760 }}>
       <PageHeader title="Settings" />
@@ -36,15 +37,24 @@ export function Settings() {
           read notes on an album, and get picks for tonight. It uses Claude, from Anthropic, with your own API key.
         </p>
         <AiKeyForm />
+        <ModelPicker />
         <details className="ai-details">
           <summary>Cost and privacy</summary>
           <p className="sub small">
-            Anthropic bills your account for each use, roughly 5 to 20¢: album notes or tonight's picks about 5¢,
-            identifying a photo or reviewing listings about 10¢, and a set of recommendations 10 to 20¢. When you use a feature, the app sends Anthropic what that feature needs: the photo,
+            Anthropic bills your account for each use. How much depends on the model: under 1¢ a use with Haiku,
+            and roughly 5 to 20¢ with Opus. A set of recommendations costs the most, since it reads your whole album list.
+            When you use a feature, the app sends Anthropic what that feature needs: the photo,
             your album list, or the listings being reviewed. Nothing is sent until you tap an AI button.
           </p>
         </details>
       </section>
+
+      {ai.data?.configured && (
+        <section className="glass panel" aria-labelledby="h-cost">
+          <h2 id="h-cost">AI costs</h2>
+          <CostMeter />
+        </section>
+      )}
     </div>
   );
 }

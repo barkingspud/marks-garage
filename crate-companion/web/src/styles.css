@@ -382,6 +382,22 @@ select.input option { background: #1b2028; }
 .ai-key { display: flex; flex-direction: column; gap: 10px; }
 .ai-key p { margin: 0; }
 .ai-details { margin-top: 16px; }
+.model-picker { border: 0; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.model-picker legend { font-weight: 600; margin-bottom: 8px; padding: 0; }
+.model-option { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px; cursor: pointer; min-height: 44px; }
+.model-option input { margin-top: 4px; accent-color: var(--amber); }
+.model-option.on { border-color: rgba(242,181,68,.5); }
+.model-blurb { display: block; margin-top: 2px; }
+.cost-meter { display: flex; flex-direction: column; gap: 12px; }
+.cost-meter p { margin: 0; }
+.cost-meter .btn { align-self: flex-start; }
+.cost-totals { display: flex; gap: 24px; flex-wrap: wrap; }
+.cost-totals > div { display: flex; flex-direction: column; gap: 2px; min-width: 110px; }
+.cost-totals b { font-size: 1.5rem; }
+.cost-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.cost-table th { text-align: left; font-weight: 600; padding: 6px 8px 6px 0; }
+.cost-table td { padding: 6px 8px 6px 0; border-top: 1px solid rgba(255,255,255,.08); }
+.cost-table th:nth-child(n+3), .cost-table td:nth-child(n+3) { text-align: right; padding-right: 0; padding-left: 8px; }
 .ai-details summary { cursor: pointer; color: var(--amber); font-weight: 600; min-height: 32px; }
 .ai-details p { margin: 8px 0 0; }
 .ai-hint { display: flex; align-items: center; gap: 8px; margin: 0; }

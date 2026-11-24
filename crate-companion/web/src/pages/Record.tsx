@@ -9,7 +9,8 @@ import { Empty, ErrorBox, GradeMeter, Loading, artistLine, discogsUrl, formatLin
 import { groupCredits, plainNotes } from '../discogs-text';
 import { myGrades } from '../grades';
 import { useRoom } from '../room';
-import { AiGate, Sparkle } from '../components/Ai';
+import { AiGate, Sparkle, useAiStatus } from '../components/Ai';
+import { modelInfo } from '../../../shared/ai-models';
 import type { AlbumNotes } from '../../../shared/ai-types';
 import { load, save } from '../storage';
 
@@ -155,11 +156,15 @@ export function Record() {
 /** The AI's notes on the album and this pressing, kept on the device once written. */
 function AiNotes({ id }: { id: number }) {
   const storeKey = `ai-notes-${id}`;
-  const [notes, setNotes] = useState<AlbumNotes | null>(() => load<{ n?: AlbumNotes }>(storeKey, {}).n ?? null);
+  const [saved, setSaved] = useState(() => load<{ n?: AlbumNotes; model?: string }>(storeKey, {}));
+  const notes = saved.n ?? null;
+  const model = useAiStatus().data?.model;
   const write = useMutation({
     mutationFn: () => api.ai.notes(id),
-    onSuccess: (n) => { setNotes(n); save(storeKey, { n }); },
+    onSuccess: (n) => { const v = { n, model }; setSaved(v); save(storeKey, v); },
   });
+  const writtenBy = modelInfo(saved.model ?? '')?.name;
+  const current = modelInfo(model ?? '');
   return (
     <section className="glass panel ai-notes" aria-labelledby="h-ai-notes">
       <h2 id="h-ai-notes"><Sparkle />About this album</h2>
@@ -176,7 +181,12 @@ function AiNotes({ id }: { id: number }) {
             <h3>This pressing</h3>
             <p>{notes.thisPressing}</p>
             {notes.caveat && <p className="sub small">{notes.caveat}</p>}
-            <p className="sub small">Written by AI from what it knows and the Discogs data. It can be wrong.</p>
+            <p className="sub small">Written by AI{writtenBy ? ` (${writtenBy})` : ''} from what it knows and the Discogs data. It can be wrong.</p>
+            {current && saved.model && saved.model !== current.id && (
+              <button className="btn small" style={{ marginTop: 10 }} disabled={write.isPending} onClick={() => write.mutate()}>
+                {write.isPending ? 'Writing…' : `Write again with ${current.name}`}
+              </button>
+            )}
           </>
         ) : (
           <>
