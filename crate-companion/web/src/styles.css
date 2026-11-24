@@ -411,3 +411,5 @@ select.input option { background: #1b2028; }
 .ai-note { display: inline-flex; gap: 6px; align-items: flex-start; color: var(--text); }
 .ai-note .sparkle { width: 14px; height: 14px; margin-top: 3px; }
 .home-top .page-actions { flex-wrap: nowrap; }
+.hero-kicker { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.hero-kicker .amber { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
