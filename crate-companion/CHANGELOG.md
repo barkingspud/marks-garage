@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Album page actions are tidier: one main action (See the listings, or Add to collection), then a
+  row of icon buttons: Collection, a heart for the wantlist (tap to add or remove), Shops and
+  Discogs. Removing from the wantlist asks first and keeps you on the album.
+
 - Album pages have **Add to collection** for any release you don't own (from your wantlist, Check an
   album or anywhere else). An album on your wantlist is removed from it when added.
 
