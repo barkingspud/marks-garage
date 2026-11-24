@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- "Surprise me" gives different picks each time: the album list is shuffled and the last picks
+  are skipped. (Asked exactly the same thing, the AI kept giving the same four albums.)
 - **AI without a key.** App builds can include AI through the new Crate Companion AI server
   (`ai-server/`, a Cloudflare Worker): Haiku 5.5, 150 uses per install per month, with a monthly
   budget for the whole app. Settings shows the uses left. A key of your own is still an option,

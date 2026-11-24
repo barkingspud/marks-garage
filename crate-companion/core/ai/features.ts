@@ -198,15 +198,27 @@ export async function albumNotes(ask: Ask, d: ReleaseDetails): Promise<AlbumNote
 // ------------------------------------------------------------------ what to play tonight
 
 
-export async function playTonight(ask: Ask, mood: string, collection: CollectionItem[]): Promise<TonightResult> {
+/**
+ * Picks for right now. Asked the same thing twice, the AI tends to give the same answer, so the
+ * list is shuffled each time and the last picks are named, so "Surprise me" really does.
+ */
+export async function playTonight(
+  ask: Ask, mood: string, collection: CollectionItem[], avoid: number[] = [], rand: () => number = Math.random,
+): Promise<TonightResult> {
   const items = forAi(collection);
-  const lines = items.map((i) => {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
+  }
+  const skip = new Set(avoid);
+  const lines = shuffled.map((i) => {
     const b = i.basic_information;
     return `${b.id} | ${albumLine(b)} | ${(b.styles ?? b.genres ?? []).slice(0, 3).join(', ')}${i.rating ? ` | rated ${i.rating}/5` : ''}`;
   });
   const r = await ask({
     task: 'tonight',
-    content: `Their mood or moment: <request>${mood || 'Surprise me.'}</request>\n\nTheir albums (release id | album | styles | rating):\n<data>\n${lines.join('\n')}\n</data>`,
+    content: `Their mood or moment: <request>${mood || 'Surprise me: something they might not think of.'}</request>\n\n${skip.size ? `Picked last time, so choose different ones: ${[...skip].join(', ')}\n\n` : ''}Their albums, in no particular order (release id | album | styles | rating):\n<data>\n${lines.join('\n')}\n</data>`,
   });
   const byId = new Map(items.map((i) => [i.basic_information.id, i.basic_information]));
   const picks = r.picks.flatMap((p) => {

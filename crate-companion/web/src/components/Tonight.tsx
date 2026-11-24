@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
@@ -9,12 +9,17 @@ import { ErrorBox, Loading } from './ui';
 /** "What should I play tonight?": picks from your own shelves for a mood. */
 export function Tonight() {
   const [mood, setMood] = useState('');
-  const pick = useMutation({ mutationFn: () => api.ai.tonight(mood) });
+  const qc = useQueryClient();
+  // Ask for different albums than the ones on screen.
+  const pick = useMutation({
+    mutationFn: (avoid: number[]) => api.ai.tonight(mood, avoid),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['ai-allowance'] }),
+  });
   return (
     <section className="glass panel tonight" aria-labelledby="h-tonight">
       <h2 id="h-tonight"><Sparkle />What should I play tonight?</h2>
       <AiGate what="pick albums from your shelves for your mood">
-        <form className="toolbar" onSubmit={(e) => { e.preventDefault(); pick.mutate(); }}>
+        <form className="toolbar" onSubmit={(e) => { e.preventDefault(); pick.mutate(pick.data?.picks.map((p) => p.releaseId) ?? []); }}>
           <label className="field-glass">
             <span className="sr-only">Your mood</span>
             <input placeholder="Rainy Sunday, cooking dinner, friends over…" value={mood} onChange={(e) => setMood(e.target.value)} />

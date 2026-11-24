@@ -155,7 +155,7 @@ export const api = {
     clearUsage: () => (L ? local((c) => c.aiClearUsage()) : call<AiUsageReport>('/ai/usage', { method: 'DELETE' })),
     review: (listings: Listing[]) => (L ? local((c) => c.aiReviewListings({ listings })) : call<ListingReview>('/ai/review', { method: 'POST', body: JSON.stringify({ listings }) })),
     notes: (releaseId: number) => (L ? local((c) => c.aiNotes(releaseId)) : call<AlbumNotes>(`/ai/notes/${releaseId}`)),
-    tonight: (mood: string) => (L ? local((c) => c.aiTonight({ mood })) : call<TonightResult>('/ai/tonight', { method: 'POST', body: JSON.stringify({ mood }) })),
+    tonight: (mood: string, avoid: number[] = []) => (L ? local((c) => c.aiTonight({ mood, avoid })) : call<TonightResult>('/ai/tonight', { method: 'POST', body: JSON.stringify({ mood, avoid }) })),
   },
 
   // ---- connecting

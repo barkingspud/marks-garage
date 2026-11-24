@@ -258,3 +258,19 @@ describe('AI server client', () => {
     await expect(p.ask({ task: 'tonight', content: 'x' }, 'claude-haiku-5-5')).rejects.toMatchObject({ status: 429, message: expect.stringMatching(/150 included/) });
   });
 });
+
+describe('tonight picks', () => {
+  it('shuffles the albums and names the last picks, so Surprise me varies', async () => {
+    const collection = await fetchCollection(new MockDiscogs(), 'demo');
+    const sent: string[] = [];
+    const ask = (async (o: { content: unknown }) => { sent.push(String(o.content)); return { note: 'x', picks: [] }; }) as unknown as Ask;
+    let seed = 1;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    await playTonight(ask, '', collection, [], rand);
+    await playTonight(ask, '', collection, [11, 22], rand);
+    const order = (c: string) => c.split('<data>')[1]!.split('\n').filter(Boolean).slice(0, 5).join('|');
+    expect(order(sent[0]!)).not.toBe(order(sent[1]!));
+    expect(sent[0]).not.toMatch(/Picked last time/);
+    expect(sent[1]).toMatch(/Picked last time, so choose different ones: 11, 22/);
+  });
+});
