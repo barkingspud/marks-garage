@@ -175,6 +175,8 @@ select.input option { background: #1b2028; }
 .row .cover { width: 56px; flex: 0 0 56px; border-radius: 6px; box-shadow: 0 8px 16px rgba(0,0,0,.45); }
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
 /* Long titles wrap to two lines, then end with "…" (works inside links too). */
+.row-tap { cursor: pointer; }
+.row-title { background: none; border: 0; padding: 0; margin: 0; min-width: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .row-main b { font-weight: 650; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .row-main a { text-decoration: none; min-width: 0; }
 .row-main span { font-size: 14px; color: var(--sub); }
@@ -300,6 +302,10 @@ select.input option { background: #1b2028; }
 .status-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .status { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 14px; font-size: 12px; font-weight: 650; background: rgba(255,255,255,.1); border: 1px solid var(--edge); }
 .status.yes { background: rgba(242,181,68,.18); border-color: rgba(242,181,68,.38); color: var(--amber); }
+.status-retry { color: var(--text); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.home-value { margin: 12px 0 0; }
+.link-button { background: none; border: 0; padding: 8px 0; min-height: 40px; color: var(--amber); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; text-decoration: underline; text-underline-offset: .15em; }
+.price-error { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .pressing { display: flex; align-items: center; gap: 12px; min-height: 60px; border-top: 1px solid rgba(255,255,255,.09); cursor: pointer; }
 .pressing:first-of-type { border-top: 0; }
 .pressing input { width: 22px; height: 22px; accent-color: var(--amber); flex: 0 0 auto; }

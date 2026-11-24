@@ -176,10 +176,13 @@ export async function reviewListings(ask: Ask, listings: Listing[]): Promise<Lis
 
 // ------------------------------------------------------------------ album notes
 
-
-export async function albumNotes(ask: Ask, d: ReleaseDetails): Promise<AlbumNotes> {
+/**
+ * What the AI is given for notes on one pressing. It starts with the release id, which the AI
+ * server checks before it keeps the notes for everyone (ai-server/src/handler.ts).
+ */
+export function notesContent(d: ReleaseDetails): string {
   const info = {
-    title: d.title, artists: artists(d), year: d.year, released: d.released_formatted, country: d.country,
+    id: d.id, title: d.title, artists: artists(d), year: d.year, released: d.released_formatted, country: d.country,
     labels: d.labels.map((l) => `${clean(l.name)} ${l.catno ?? ''}`.trim()),
     formats: d.formats.map((f) => [f.name, ...(f.descriptions ?? []), f.text].filter(Boolean).join(', ')),
     genres: d.genres, styles: d.styles,
@@ -189,10 +192,11 @@ export async function albumNotes(ask: Ask, d: ReleaseDetails): Promise<AlbumNote
     discogsNotes: d.notes?.slice(0, 3000),
     community: d.community,
   };
-  return ask({
-    task: 'notes',
-    content: `<data>\n${JSON.stringify(info)}\n</data>`,
-  });
+  return `<data>\n${JSON.stringify(info)}\n</data>`;
+}
+
+export async function albumNotes(ask: Ask, d: ReleaseDetails): Promise<AlbumNotes> {
+  return ask({ task: 'notes', content: notesContent(d) });
 }
 
 // ------------------------------------------------------------------ what to play tonight

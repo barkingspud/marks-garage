@@ -50,6 +50,7 @@ export function createApp(core: CrateCore) {
   app.post('/ai/recommend', async (c) => c.json(await core.aiRecommend(await c.req.json())));
   app.post('/ai/review', async (c) => c.json(await core.aiReviewListings(await c.req.json())));
   app.get('/ai/notes/:releaseId', async (c) => c.json(await core.aiNotes(num(c, 'releaseId'))));
+  app.get('/ai/notes/:releaseId/shared', async (c) => c.json(await core.aiSharedNotes(num(c, 'releaseId'))));
   app.post('/ai/tonight', async (c) => c.json(await core.aiTonight(await c.req.json())));
   app.get('/wants', async (c) => c.json(await core.wants()));
   app.post('/wants', async (c) => c.json(await core.addWant(await c.req.json())));

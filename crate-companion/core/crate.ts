@@ -3,9 +3,9 @@ import type { CollectionField, CollectionFolder, CollectionItem, Listing, Market
 import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
 import type { AiFeature, AiRecommendResult, AiStatus, AiUsageEntry, AiUsageGroup, AiUsageReport, AlbumNotes, IdentifyResult, ListingReview, TonightResult } from '../shared/ai-types';
 import { costOf, DEFAULT_AI_MODEL, isAiModel, type AiModelId } from '../shared/ai-models';
-import { albumNotes, identify, playTonight, recommendFor, reviewListings, type Photo } from './ai/features';
+import { albumNotes, identify, notesContent, playTonight, recommendFor, reviewListings, type Photo } from './ai/features';
 import { AiError, anthropicBackend, type AiBackend, type Allowance, type Ask, type Usage } from './ai/llm';
-import { proxyBackend } from './ai/proxy';
+import { proxyBackend, type SharedNotes } from './ai/proxy';
 import { DiscogsConnection, type ConnectionStatus } from './auth/connection';
 import type { Consumer } from './auth/oauth';
 import { MemoryStore, type KeyValueStore } from './auth/store';
@@ -46,8 +46,8 @@ export interface CoreOptions {
   includedAi?: (installId: string) => IncludedAi;
 }
 
-/** The app's included AI: answers tasks, and says how much of the month's allowance is left. */
-export type IncludedAi = AiBackend & { allowance(): Promise<Allowance> };
+/** The app's included AI: answers tasks, keeps album notes shared, and says how much of the month's allowance is left. */
+export type IncludedAi = AiBackend & SharedNotes & { allowance(): Promise<Allowance> };
 
 const AI_KEY = 'anthropic-api-key';
 const AI_MODEL_KEY = 'ai-model';
@@ -404,10 +404,26 @@ export class CrateCore {
     if (!releaseId) throw new CrateError(400, 'releaseId required');
     const hit = this.notes.get(String(releaseId));
     if (hit) return hit;
-    const ask = await this.asker('notes');
-    const n = await albumNotes(ask, await this.api.release(releaseId));
+    let n: AlbumNotes;
+    if (!(await this.store.get(AI_KEY)) && this.makeIncluded) {
+      // Included AI: notes are shared per pressing, written once (one use) and then free to everyone.
+      const r = await (await this.includedAi()).writeNotes(releaseId, notesContent(await this.api.release(releaseId)), crypto.randomUUID());
+      if (r.allowance) await this.saveAllowance(r.allowance);
+      n = r.output;
+    } else {
+      // With your own key (your model, your bill), notes stay yours.
+      n = await albumNotes(await this.asker('notes'), await this.api.release(releaseId));
+    }
     this.notes.set(String(releaseId), n, 24 * 60 * 60_000);
     return n;
+  }
+
+  /** Notes someone already wrote for this pressing through the included AI, or null. Free. */
+  async aiSharedNotes(releaseId: number): Promise<AlbumNotes | null> {
+    if (!releaseId || !this.makeIncluded) return null;
+    try {
+      return await (await this.includedAi()).sharedNotes(releaseId);
+    } catch { return null; }
   }
 
   /** A few albums from your own shelves for right now. */

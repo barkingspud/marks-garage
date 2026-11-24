@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { CollectionItem } from '../../../shared/discogs-types';
 import { api } from '../api';
@@ -15,11 +15,21 @@ import { useWide } from '../useWide';
 type Sort = 'added' | 'artist' | 'title' | 'year' | 'rating';
 const SORTS: [Sort, string][] = [['added', 'Newest first'], ['artist', 'Artist'], ['title', 'Title'], ['year', 'Year'], ['rating', 'My rating']];
 
+/**
+ * How the collection was left: kept while the app is open, so going back from an album
+ * returns to the same search, filter, sort and place in the list.
+ */
+const memo = { folder: 0, q: '', style: '', sort: 'added' as Sort, scrollY: 0 };
+
 export function Collection() {
-  const [folder, setFolder] = useState(0);
-  const [q, setQ] = useState('');
-  const [style, setStyle] = useState('');
-  const [sort, setSort] = useState<Sort>('added');
+  const [folder, setFolderState] = useState(memo.folder);
+  const [q, setQState] = useState(memo.q);
+  const [style, setStyleState] = useState(memo.style);
+  const [sort, setSortState] = useState<Sort>(memo.sort);
+  const setFolder = (v: number) => { memo.folder = v; memo.scrollY = 0; setFolderState(v); };
+  const setQ = (v: string) => { memo.q = v; setQState(v); };
+  const setStyle = (v: string) => { memo.style = v; setStyleState(v); };
+  const setSort = (v: Sort) => { memo.sort = v; setSortState(v); };
   const [view, setView] = useState<'grid' | 'list'>(() => load('view', { v: 'grid' as 'grid' | 'list' }).v);
   const [selected, setSelected] = useState<number | null>(null);
   const wide = useWide();
@@ -27,6 +37,20 @@ export function Collection() {
   const folders = useQuery({ queryKey: ['folders'], queryFn: api.folders });
   const coll = useQuery({ queryKey: ['collection', folder], queryFn: () => api.collection(folder) });
   const fields = useQuery({ queryKey: ['fields'], queryFn: api.fields });
+
+  // Remember the scroll position, and go back to it once the albums are on screen again.
+  // (The listener stops before the next page is drawn: a shorter page would move the position.)
+  useLayoutEffect(() => {
+    const onScroll = () => { memo.scrollY = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  const restored = useRef(false);
+  useLayoutEffect(() => {
+    if (restored.current || !coll.data) return;
+    restored.current = true;
+    if (memo.scrollY > 0) window.scrollTo(0, memo.scrollY);
+  }, [coll.data]);
 
   const items = coll.data?.items ?? [];
   const styles = useMemo(() => {
@@ -55,7 +79,11 @@ export function Collection() {
   const current = wide ? (shown.find((i) => i.instance_id === selected) ?? shown[0]) : undefined;
   useRoom(current ? current.basic_information.cover_image || current.basic_information.thumb : null, 215);
 
-  const open = (i: CollectionItem) => (wide ? setSelected(i.instance_id) : navigate(`/record/${i.id}`));
+  const open = (i: CollectionItem) => {
+    if (wide) { setSelected(i.instance_id); return; }
+    memo.scrollY = window.scrollY;
+    navigate(`/record/${i.id}`);
+  };
   const setV = (v: 'grid' | 'list') => { setView(v); save('view', { v }); };
 
   return (
@@ -118,10 +146,10 @@ export function Collection() {
               {shown.map((i) => {
                 const b = i.basic_information;
                 return (
-                  <li key={i.instance_id} className="row">
+                  <li key={i.instance_id} className="row row-tap" onClick={() => open(i)}>
                     <Cover src={b.thumb} id={b.id} />
                     <span className="row-main">
-                      <Link to={`/record/${b.id}`}><b>{b.title}</b></Link>
+                      <button type="button" className="row-title" onClick={(e) => { e.stopPropagation(); open(i); }}><b>{b.title}</b></button>
                       <span>{artistLine(b)}{b.year ? `, ${b.year}` : ''}</span>
                       <span>{b.labels[0] ? `${b.labels[0].name} ${b.labels[0].catno ?? ''}` : ''}</span>
                     </span>

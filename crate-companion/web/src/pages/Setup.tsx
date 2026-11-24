@@ -8,6 +8,7 @@ export function Setup({ status, error: startError }: { status: Status; error?: s
   const qc = useQueryClient();
   const [token, setToken] = useState('');
   const [showToken, setShowToken] = useState(false);
+  const [revealToken, setRevealToken] = useState(false);
   const urlError = new URLSearchParams(window.location.search).get('connect_error');
   const canConnect = !!status.auth?.canConnect;
   const connect = useMutation({ mutationFn: api.connect });
@@ -49,8 +50,13 @@ export function Setup({ status, error: startError }: { status: Status; error?: s
             <form style={{ display: 'flex', flexDirection: 'column', gap: 10 }} onSubmit={(e) => { e.preventDefault(); saveToken.mutate(); }}>
               <label className="field">
                 Personal access token
-                <input className="input" value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" spellCheck={false} placeholder="Paste your token" />
+                <input className="input" type={revealToken ? 'text' : 'password'} value={token} onChange={(e) => setToken(e.target.value)} autoComplete="off" spellCheck={false} placeholder="Paste your token" />
               </label>
+              {token && (
+                <button type="button" className="link-button" style={{ alignSelf: 'flex-start', marginTop: -6 }} onClick={() => setRevealToken((v) => !v)}>
+                  {revealToken ? 'Hide token' : 'Show token'}
+                </button>
+              )}
               <p className="sub small">Get one on Discogs under <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noreferrer">Settings, Developers</a>, then Generate new token. It's kept only on this device.</p>
               <button className="btn" type="submit" disabled={!token.trim() || saveToken.isPending}>{saveToken.isPending ? 'Checking…' : 'Use this token'}</button>
             </form>

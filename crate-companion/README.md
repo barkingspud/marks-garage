@@ -111,7 +111,9 @@ the app's own tasks from `core/ai/tasks.ts`, always on Haiku 5.5, and enforces t
 | `MONTHLY_BUDGET_USD` | 10 | When the month's spend reaches this, the included AI pauses until next month |
 | `AI_ENABLED` | true | Set to "false" to turn the included AI off |
 
-It keeps only counts (uses per install, spend per month), never what was asked.
+It keeps counts (uses per install, spend per month) and **shared album notes**: notes written by the
+included AI are kept per pressing (Discogs release ID) and served free to the next person who
+opens it. It never keeps what anyone asked.
 `.github/workflows/crate-companion-ai-server.yml` deploys it from `main` once these repository
 secrets are set: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `ANTHROPIC_API_KEY`. Set the
 server's address as the repository **variable** `AI_SERVER_URL`, and the Android build includes

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { BasicInformation, ReleaseDetails, Track } from '../../../shared/discogs-types';
 import { api } from '../api';
@@ -158,10 +158,22 @@ function AiNotes({ id }: { id: number }) {
   const storeKey = `ai-notes-${id}`;
   const [saved, setSaved] = useState(() => load<{ n?: AlbumNotes; model?: string }>(storeKey, {}));
   const notes = saved.n ?? null;
-  const model = useAiStatus().data?.model;
+  const status = useAiStatus().data;
+  const model = status?.model;
+  // Notes are shared per pressing: if anyone already wrote them, show them without a tap (free).
+  const shared = useQuery({
+    queryKey: ['shared-notes', id],
+    queryFn: () => api.ai.sharedNotes(id),
+    enabled: !notes && !!status?.included,
+    staleTime: Infinity,
+    retry: false,
+  });
+  useEffect(() => {
+    if (!notes && shared.data) { const v = { n: shared.data, model: 'claude-haiku-5-5' }; setSaved(v); save(storeKey, v); }
+  }, [shared.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const write = useMutation({
     mutationFn: () => api.ai.notes(id),
-    onSuccess: (n) => { const v = { n, model }; setSaved(v); save(storeKey, v); },
+    onSuccess: (n) => { const v = { n, model: status?.ownKey ? model : 'claude-haiku-5-5' }; setSaved(v); save(storeKey, v); },
   });
   const writtenBy = modelInfo(saved.model ?? '')?.name;
   const current = modelInfo(model ?? '');

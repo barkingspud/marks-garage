@@ -92,4 +92,13 @@ export class Meter {
   async spent(now = new Date()): Promise<number> {
     return (await this.store.get<number>(`spend:${month(now)}`)) ?? 0;
   }
+
+  /** Album notes, shared: written once per pressing (Discogs release), then read by everyone. */
+  async getNotes(releaseId: number): Promise<unknown | undefined> {
+    return this.store.get(`notes:${releaseId}`);
+  }
+
+  async putNotes(releaseId: number, notes: unknown) {
+    await this.store.put(`notes:${releaseId}`, notes);
+  }
 }
