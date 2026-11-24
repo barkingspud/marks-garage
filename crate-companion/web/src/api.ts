@@ -31,12 +31,16 @@ interface NativeBridge {
   openExternal?: (url: string) => void;
   /** Where Discogs sends the user back after signing in (e.g. cratecompanion://auth). */
   callbackUrl?: string;
+  /** Scan a barcode with the camera; resolves to its digits, or null if canceled. */
+  scanBarcode?: () => Promise<string | null>;
+  /** Keep the screen on (during long scans) or let it sleep again. */
+  keepAwake?: (on: boolean) => void;
 }
 declare global {
   interface Window { crateNative?: NativeBridge }
 }
 
-const native = typeof window !== 'undefined' ? window.crateNative : undefined;
+export const native = typeof window !== 'undefined' ? window.crateNative : undefined;
 const wantLocal = (() => {
   if (native) return true;
   try {

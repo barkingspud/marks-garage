@@ -82,9 +82,10 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
 - [x] Step 1: the shared core (`core/`). Everything the server did now runs anywhere, with
       pluggable network and storage. The web app can run it directly ("local mode",
       `?local=1`), so the apps need no server.
-- [ ] Step 2: Android app (Capacitor): native network bridge (Discogs blocks browser writes),
-      secure storage, "Connect with Discogs" via a custom-scheme callback, native barcode
-      scanner (ML Kit), keep the screen awake during scans, builds on GitHub Actions.
+- [x] Step 2: Android app (Capacitor): native network bridge (Discogs blocks browser writes),
+      on-device storage (excluded from cloud backup), "Connect with Discogs" returning to
+      `cratecompanion://auth`, Google's barcode scanner (ML Kit), keep the screen awake during
+      scans, icon and launch screen, debug and signed release builds on GitHub Actions.
 - [ ] Step 3: Windows desktop app (Electron): same core with Node's fetch in the main process,
       protocol-handler sign-in, installer and auto-updates via GitHub Releases.
 - [ ] Step 4: store readiness: Play listing, privacy policy page, data safety answers, icons.

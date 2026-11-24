@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+**Android app (0.2.0).**
+
+- Crate Companion as an installable Android app that runs entirely on the phone.
+- Native networking, so the app can change your wantlist and collection (Discogs blocks this
+  from web pages).
+- Sign-in kept on the phone and excluded from cloud backup and device transfer.
+- "Connect with Discogs" opens Discogs in a browser tab and returns to the app.
+- Record Check scans barcodes with Google's scanner.
+- The screen stays on during seller scans and recommendations.
+- App icon and launch screen.
+- GitHub Actions builds a debug APK on every change, and signed release builds once the
+  signing secrets are set.
+- Web: the barcode camera explains when it needs a secure (https) connection.
+
 **Groundwork for standalone apps.**
 
 - New `core/`: everything the server did (Discogs client, rate limiting, caching, sign-in,

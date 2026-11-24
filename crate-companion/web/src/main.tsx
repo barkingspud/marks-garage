@@ -1,3 +1,5 @@
+// Must come first: sets up the Android bridge before the API module reads it.
+import './native/capacitor';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { StrictMode } from 'react';
