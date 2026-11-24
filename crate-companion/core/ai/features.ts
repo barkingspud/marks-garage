@@ -178,7 +178,9 @@ export async function recommendFor(
     const t = splitTitle(r.title);
     picks.push({
       masterId: r.type === 'master' ? r.id : r.master_id, releaseId: r.type === 'release' ? r.id : undefined,
-      artist: t.artist || p.artist, title: t.title, year: r.year ? Number(r.year) || undefined : p.year ?? undefined,
+      artist: t.artist || p.artist, title: t.title, // Discogs search gives an album the year of its main pressing, often a reissue; the
+      // AI's year is the original release, so prefer it.
+      year: p.year ?? (Number(r.year) || undefined),
       thumb: r.thumb || r.cover_image, styles: r.style, why: p.why,
     });
   }

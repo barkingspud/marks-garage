@@ -174,8 +174,9 @@ select.input option { background: #1b2028; }
 .row:first-child { border-top: 0; }
 .row .cover { width: 56px; flex: 0 0 56px; border-radius: 6px; box-shadow: 0 8px 16px rgba(0,0,0,.45); }
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
-.row-main b { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row-main a { text-decoration: none; }
+/* Long titles wrap to two lines, then end with "…" (works inside links too). */
+.row-main b { font-weight: 650; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.row-main a { text-decoration: none; min-width: 0; }
 .row-main span { font-size: 14px; color: var(--sub); }
 .amber { color: var(--amber); font-weight: 750; font-variant-numeric: tabular-nums; }
 

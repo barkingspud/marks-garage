@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Long album titles in lists wrap to two lines instead of running off the screen.
+- AI recommendations show an album's original year (Discogs search can give a reissue's year).
+
 **AI features (0.3.0)**, using Claude with your own Anthropic API key (Settings):
 
 - Identify a pressing from photos of the cover, label, barcode or runout (Check an album).
