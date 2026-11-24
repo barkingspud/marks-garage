@@ -1,9 +1,22 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022"],
-    "types": ["node"],
+    "lib": [
+      "ES2022"
+    ],
+    "types": [
+      "node"
+    ],
     "tsBuildInfoFile": "node_modules/.tmp/server.tsbuildinfo"
   },
-  "include": ["server", "core", "shared", "vite.config.ts", "capacitor.config.ts"]
+  "include": [
+    "server",
+    "core",
+    "shared",
+    "vite.config.ts",
+    "capacitor.config.ts",
+    "ai-server/src/**/*.test.ts",
+    "ai-server/src/meter.ts",
+    "ai-server/src/handler.ts"
+  ]
 }

@@ -4,7 +4,8 @@ import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
 import type { AiFeature, AiRecommendResult, AiStatus, AiUsageEntry, AiUsageGroup, AiUsageReport, AlbumNotes, IdentifyResult, ListingReview, TonightResult } from '../shared/ai-types';
 import { costOf, DEFAULT_AI_MODEL, isAiModel, type AiModelId } from '../shared/ai-models';
 import { albumNotes, identify, playTonight, recommendFor, reviewListings, type Photo } from './ai/features';
-import { AiError, anthropicBackend, type AiBackend, type Ask, type Usage } from './ai/llm';
+import { AiError, anthropicBackend, type AiBackend, type Allowance, type Ask, type Usage } from './ai/llm';
+import { proxyBackend } from './ai/proxy';
 import { DiscogsConnection, type ConnectionStatus } from './auth/connection';
 import type { Consumer } from './auth/oauth';
 import { MemoryStore, type KeyValueStore } from './auth/store';
@@ -39,11 +40,22 @@ export interface CoreOptions {
   personalUsername?: string;
   /** Makes the AI from an API key; tests pass a fake. */
   aiBackend?: (apiKey: string) => AiBackend;
+  /** The Crate Companion AI server, for AI without a key of your own (see ai-server/). */
+  aiServer?: string;
+  /** Makes the included AI for an install; tests pass a fake. Defaults to the AI server. */
+  includedAi?: (installId: string) => IncludedAi;
 }
+
+/** The app's included AI: answers tasks, and says how much of the month's allowance is left. */
+export type IncludedAi = AiBackend & { allowance(): Promise<Allowance> };
 
 const AI_KEY = 'anthropic-api-key';
 const AI_MODEL_KEY = 'ai-model';
 const AI_USAGE_KEY = 'ai-usage';
+const AI_INSTALL_KEY = 'ai-install-id';
+const AI_ALLOWANCE_KEY = 'ai-allowance';
+/** The included AI always runs on Haiku. */
+const INCLUDED_MODEL: AiModelId = 'claude-haiku-5-5';
 /** How many uses the cost log keeps. */
 const USAGE_KEEP = 1000;
 
@@ -64,10 +76,15 @@ export class CrateCore {
     readonly connection?: DiscogsConnection,
     private store: KeyValueStore = new MemoryStore(),
     private makeAi: (apiKey: string) => AiBackend = anthropicBackend,
+    private makeIncluded?: (installId: string) => IncludedAi,
   ) {}
 
+  private static included(o: Pick<CoreOptions, 'aiServer' | 'includedAi'>) {
+    return o.includedAi ?? (o.aiServer ? (id: string) => proxyBackend(o.aiServer!, id) : undefined);
+  }
+
   static async create(o: CoreOptions): Promise<CrateCore> {
-    if (o.mock) return new CrateCore(new MockDiscogs(), undefined, o.store, o.aiBackend);
+    if (o.mock) return new CrateCore(new MockDiscogs(), undefined, o.store, o.aiBackend, CrateCore.included(o));
     const client = new DiscogsClient({ userAgent: o.userAgent, fetch: o.fetch });
     const connection = await DiscogsConnection.create({
       consumer: o.consumer, personalToken: o.personalToken, personalUsername: o.personalUsername,
@@ -75,12 +92,15 @@ export class CrateCore {
       apply: (auth) => client.setAuth(auth),
       identify: (auth) => client.identify(auth),
     });
-    return new CrateCore(client, connection, o.store, o.aiBackend);
+    return new CrateCore(client, connection, o.store, o.aiBackend, CrateCore.included(o));
   }
 
   /** For tests and the server: wrap an existing Discogs client (e.g. the mock). */
-  static fromApi(api: DiscogsApi, connection?: DiscogsConnection, store?: KeyValueStore, aiBackend?: (apiKey: string) => AiBackend) {
-    return new CrateCore(api, connection, store, aiBackend);
+  static fromApi(
+    api: DiscogsApi, connection?: DiscogsConnection, store?: KeyValueStore, aiBackend?: (apiKey: string) => AiBackend,
+    ai: Pick<CoreOptions, 'aiServer' | 'includedAi'> = {},
+  ) {
+    return new CrateCore(api, connection, store, aiBackend, CrateCore.included(ai));
   }
 
   private async me(): Promise<string> {
@@ -195,10 +215,48 @@ export class CrateCore {
     return job as Job<T>;
   }
 
-  // ------------------------------------------------ AI (the user's own Anthropic API key)
+  // ------------------------------------------------ AI: included (the AI server) or the user's own key
 
   async aiStatus(): Promise<AiStatus> {
-    return { configured: !!(await this.store.get(AI_KEY)), model: await this.aiModel() };
+    const ownKey = !!(await this.store.get(AI_KEY));
+    const included = !!this.makeIncluded;
+    return {
+      configured: ownKey || included,
+      source: ownKey ? 'own' : included ? 'included' : null,
+      ownKey,
+      included,
+      model: ownKey ? await this.aiModel() : INCLUDED_MODEL,
+      allowance: included ? await this.savedAllowance() : undefined,
+    };
+  }
+
+  /** How much of the month's included AI is left, asked fresh from the AI server. */
+  async aiAllowance(): Promise<Allowance | null> {
+    if (!this.makeIncluded) return null;
+    const a = await (await this.includedAi()).allowance();
+    await this.saveAllowance(a);
+    return a;
+  }
+
+  private async savedAllowance(): Promise<Allowance | undefined> {
+    try {
+      const a = JSON.parse((await this.store.get(AI_ALLOWANCE_KEY)) ?? 'null') as Allowance | null;
+      // Last month's count doesn't apply any more.
+      if (!a || a.resetsOn <= new Date().toISOString().slice(0, 10)) return undefined;
+      return a;
+    } catch { return undefined; }
+  }
+
+  private async saveAllowance(a: Allowance) {
+    await this.store.set(AI_ALLOWANCE_KEY, JSON.stringify(a));
+  }
+
+  private includedCache?: IncludedAi;
+  private async includedAi(): Promise<IncludedAi> {
+    if (this.includedCache) return this.includedCache;
+    let id = await this.store.get(AI_INSTALL_KEY);
+    if (!id) { id = crypto.randomUUID(); await this.store.set(AI_INSTALL_KEY, id); }
+    return (this.includedCache = this.makeIncluded!(id));
   }
 
   private async aiModel(): Promise<AiModelId> {
@@ -263,18 +321,22 @@ export class CrateCore {
     return write;
   }
 
-  /** The AI for one use of a feature: asks with the chosen model and logs what it cost. */
+  /**
+   * The AI for one use of a feature. With the user's own key: the chosen model, and the cost
+   * goes in the cost log (it's on their bill). Otherwise the included AI, on Haiku.
+   */
   private async asker(feature: AiFeature): Promise<Ask> {
-    const backend = await this.ai();
-    const model = await this.aiModel();
+    const { backend, model, own } = await this.ai();
+    const use = crypto.randomUUID();
     const entry: AiUsageEntry = { at: new Date().toISOString(), feature, model, requests: 0, inputTokens: 0, outputTokens: 0, cost: 0 };
     return async (o) => {
       try {
-        const { output, usage } = await backend.ask(o, model);
-        if (usage) await this.recordUsage(entry, usage);
+        const { output, usage, allowance } = await backend.ask(o, model, use);
+        if (own && usage) await this.recordUsage(entry, usage);
+        if (allowance) await this.saveAllowance(allowance);
         return output;
       } catch (e) {
-        if (e instanceof AiError && e.usage) await this.recordUsage(entry, e.usage);
+        if (own && e instanceof AiError && e.usage) await this.recordUsage(entry, e.usage);
         throw e;
       }
     };
@@ -296,11 +358,14 @@ export class CrateCore {
     return this.aiStatus();
   }
 
-  private async ai(): Promise<AiBackend> {
+  private async ai(): Promise<{ backend: AiBackend; model: AiModelId; own: boolean }> {
     const key = await this.store.get(AI_KEY);
-    if (!key) throw new AiError(400, 'Add your Anthropic API key in Settings to use the AI features.');
-    if (this.aiCache?.key !== key) this.aiCache = { key, backend: this.makeAi(key) };
-    return this.aiCache.backend;
+    if (key) {
+      if (this.aiCache?.key !== key) this.aiCache = { key, backend: this.makeAi(key) };
+      return { backend: this.aiCache.backend, model: await this.aiModel(), own: true };
+    }
+    if (this.makeIncluded) return { backend: await this.includedAi(), model: INCLUDED_MODEL, own: false };
+    throw new AiError(400, 'Add your Anthropic API key in Settings to use the AI features.');
   }
 
   /** Identify a pressing from up to 4 photos (cover, label, barcode, runout). Runs as a job. */

@@ -1,0 +1,27 @@
+# Crate Companion's AI server (Cloudflare Workers). Deployed by
+# .github/workflows/crate-companion-ai-server.yml; the Anthropic key is a Worker secret.
+name = "crate-companion-ai"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# "false" turns the included AI off for everyone (people with their own key are unaffected).
+AI_ENABLED = "true"
+# Uses of an AI feature per install per month.
+MONTHLY_USES = "150"
+# Requests per network address per day, so reinstalling doesn't get around the cap.
+IP_DAILY_REQUESTS = "300"
+# When the month's spend reaches this (U.S. dollars), the included AI pauses until next month.
+MONTHLY_BUDGET_USD = "10"
+
+[[durable_objects.bindings]]
+name = "METER"
+class_name = "MeterObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MeterObject"]
+
+[observability]
+enabled = true

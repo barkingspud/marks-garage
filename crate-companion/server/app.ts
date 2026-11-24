@@ -44,6 +44,7 @@ export function createApp(core: CrateCore) {
   app.delete('/ai/key', async (c) => c.json(await core.aiRemoveKey()));
   app.post('/ai/model', async (c) => c.json(await core.aiSetModel((await c.req.json<{ model?: string }>()).model ?? '')));
   app.get('/ai/usage', async (c) => c.json(await core.aiUsage()));
+  app.get('/ai/allowance', async (c) => c.json(await core.aiAllowance()));
   app.delete('/ai/usage', async (c) => c.json(await core.aiClearUsage()));
   app.post('/ai/identify', async (c) => c.json(await core.aiIdentify(await c.req.json())));
   app.post('/ai/recommend', async (c) => c.json(await core.aiRecommend(await c.req.json())));

@@ -8,9 +8,11 @@ export function DisconnectButton() {
   const m = useMutation({
     mutationFn: api.disconnect,
     onSuccess: () => {
-      qc.clear(); // cached data belongs to the old account
+      // Everything on screen belongs to the old account. Clearing the cache also drops the
+      // query that says who's signed in, so nothing would redraw: start the app over instead.
+      qc.clear();
       forgetJobResults();
-      void qc.invalidateQueries({ queryKey: ['status'] });
+      window.location.replace('/');
     },
   });
   return (

@@ -41,16 +41,17 @@ export function AiKeyForm() {
     mutationFn: api.ai.removeKey,
     onSuccess: (d) => qc.setQueryData(['ai-status'], d),
   });
-  const on = s.data?.configured;
+  const on = s.data?.ownKey;
+  const included = s.data?.included;
 
   if (on && !editing) {
     return (
       <div className="ai-key">
-        <p><span className="status yes">AI is on</span> <span className="sub small">Using {modelInfo(s.data!.model)?.name ?? s.data!.model}.</span></p>
+        <p><span className="status yes">Using your own key</span> <span className="sub small">With {modelInfo(s.data!.model)?.name ?? s.data!.model}, billed to your Anthropic account.</span></p>
         <div className="page-actions">
           <button className="btn small" onClick={() => setEditing(true)}>Replace key</button>
           <button className="btn small danger" disabled={remove.isPending}
-            onClick={() => { if (confirm('Remove your Anthropic API key from this device? The AI features turn off.')) remove.mutate(); }}>
+            onClick={() => { if (confirm(included ? 'Remove your Anthropic API key from this device? The app goes back to its included AI.' : 'Remove your Anthropic API key from this device? The AI features turn off.')) remove.mutate(); }}>
             Remove key
           </button>
         </div>
@@ -74,6 +75,32 @@ export function AiKeyForm() {
       </div>
       <ErrorBox error={save.error} />
     </form>
+  );
+}
+
+/** The app's included AI: which model, and how much of this month's allowance is left. */
+export function IncludedAi() {
+  const s = useAiStatus();
+  const fresh = useQuery({ queryKey: ['ai-allowance'], queryFn: api.ai.allowance, enabled: !!s.data?.included, retry: false });
+  const a = fresh.data ?? s.data?.allowance;
+  const resets = a ? new Date(`${a.resetsOn}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' }) : '';
+  const left = a ? Math.max(0, a.limit - a.used) : null;
+  return (
+    <div className="ai-included">
+      <p>
+        <span className="status yes">AI included</span>{' '}
+        <span className="sub small">{s.data?.ownKey ? 'Not used while your own key is set.' : 'With Haiku 5.5. No key or account needed.'}</span>
+      </p>
+      {a && left !== null && (
+        <>
+          <div className="allowance-bar" role="meter" aria-valuemin={0} aria-valuemax={a.limit} aria-valuenow={a.used} aria-label="AI uses this month">
+            <span style={{ width: `${Math.min(100, (a.used / a.limit) * 100)}%` }} />
+          </div>
+          <p className="sub small">{left} of {a.limit} uses left this month. It starts again on {resets}.</p>
+        </>
+      )}
+      {fresh.isError && !a && <p className="sub small">Couldn't check this month's uses right now.</p>}
+    </div>
   );
 }
 

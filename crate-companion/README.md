@@ -74,11 +74,14 @@ DISCOGS_ENV_FILE="/path/to/.env" npm run dev
 
 ## AI features
 
-Five features use Claude (Anthropic) with your own Anthropic API key, added in **Settings**.
-Each use bills your Anthropic account. Settings has a **model picker**: Haiku 5.5 (the default,
-under 1 cent a use), Sonnet 5.5 (about 3 to 10 cents) or Opus 5.5 (about 5 to 20 cents). An
-**AI costs** panel shows what the AI has cost this month and per use, by feature and model, so
-models can be compared on real use.
+Five features use Claude (Anthropic). There are two ways to get them:
+
+- **Included AI** (no setup): app builds made with an AI server address send AI requests to the
+  Crate Companion AI server, which runs them on Haiku 5.5 with the app's own key. Each install
+  gets **150 uses a month** (a photo identify counts as one use). Settings shows how many are left.
+- **Your own Anthropic key** (optional, in Settings): no monthly limit, a **model picker** (Haiku
+  5.5, Sonnet 5.5 or Opus 5.5), and an **AI costs** panel with what each use cost, billed to your
+  Anthropic account.
 
 | Feature | Where | What it does |
 |---|---|---|
@@ -88,11 +91,32 @@ models can be compared on real use.
 | About this album | Album page | Notes on why the album matters, what to listen for, and what's notable about this pressing. |
 | What should I play tonight? | Home | Picks from your own albums for a mood. |
 
-The key is checked with Anthropic, then kept on the device (in the installed apps) or in
-`.cache/` (web version). The app sends Anthropic only what a feature needs, and only when you tap
-it. Code: `core/ai/` (`llm.ts` calls the API through the official SDK with structured outputs;
-`features.ts` has the prompts and the Discogs checks). The models and their prices are in
-`shared/ai-models.ts`; the cost log is kept on the device, up to the last 1,000 uses.
+A key of your own is checked with Anthropic, then kept on the device (in the installed apps) or
+in `.cache/` (web version). The app sends only what a feature needs, and only when you tap it.
+Code: `core/ai/` (`tasks.ts` has each AI task's instructions and answer shape; `llm.ts` runs a
+task through the official SDK with structured outputs; `features.ts` builds each feature from
+tasks and checks the answers against Discogs). The models and their prices are in
+`shared/ai-models.ts`.
+
+### AI server
+
+`ai-server/` is a Cloudflare Worker (free plan) that holds the app's Anthropic key. It runs only
+the app's own tasks from `core/ai/tasks.ts`, always on Haiku 5.5, and enforces the limits in
+`ai-server/wrangler.toml`:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `MONTHLY_USES` | 150 | AI uses per install per month |
+| `IP_DAILY_REQUESTS` | 300 | Requests per network address per day, so reinstalling doesn't get around the cap |
+| `MONTHLY_BUDGET_USD` | 10 | When the month's spend reaches this, the included AI pauses until next month |
+| `AI_ENABLED` | true | Set to "false" to turn the included AI off |
+
+It keeps only counts (uses per install, spend per month), never what was asked.
+`.github/workflows/crate-companion-ai-server.yml` deploys it from `main` once these repository
+secrets are set: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `ANTHROPIC_API_KEY`. Set the
+server's address as the repository **variable** `AI_SERVER_URL`, and the Android build includes
+it. For the web version, set `AI_SERVER_URL` in `.env`. Run it locally with
+`npx wrangler dev -c ai-server/wrangler.toml`.
 
 ## Android app
 

@@ -178,3 +178,83 @@ describe('AI model and costs', () => {
     expect(u.recent[0]?.cost).toBeCloseTo(n * costOf('claude-haiku-5-5', tokens(1_000, 1_000)));
   });
 });
+
+describe('included AI (the AI server)', () => {
+  const allowance = { used: 1, limit: 150, resetsOn: '2999-01-01' };
+  function fakeIncluded() {
+    const calls: { task: string; model: string; use?: string }[] = [];
+    const included = {
+      check: async () => undefined,
+      allowance: async () => ({ ...allowance, used: 7 }),
+      ask: async (o: { task: string }, model: string, use?: string) => {
+        calls.push({ task: o.task, model, use });
+        const output = o.task === 'identify-read'
+          ? { isAlbum: true, artist: 'Nobody', title: 'Nothing', label: null, catalogNumbers: [], barcode: null, runout: [] }
+          : { note: 'Enjoy.', picks: [] };
+        return { output: output as never, usage: { model, tokens: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0 } }, allowance };
+      },
+    };
+    return { calls, included };
+  }
+
+  it('works without a key, on Haiku, and keeps the allowance but not a cost log', async () => {
+    const { calls, included } = fakeIncluded();
+    const core = CrateCore.fromApi(new MockDiscogs(), undefined, new MemoryStore(), undefined, { includedAi: () => included });
+    expect(await core.aiStatus()).toMatchObject({ configured: true, source: 'included', ownKey: false, included: true, model: 'claude-haiku-5-5' });
+    await core.aiSetModel('claude-opus-5-5'); // only applies to your own key
+    await core.aiTonight({});
+    expect(calls).toEqual([expect.objectContaining({ task: 'tonight', model: 'claude-haiku-5-5' })]);
+    expect((await core.aiStatus()).allowance).toEqual(allowance);
+    expect((await core.aiUsage()).total.uses).toBe(0); // it's not on the user's bill
+    expect((await core.aiAllowance())?.used).toBe(7);
+  });
+
+  it('sends both requests of one photo identify as one use', async () => {
+    const { calls, included } = fakeIncluded();
+    const core = CrateCore.fromApi(new MockDiscogs(), undefined, new MemoryStore(), undefined, { includedAi: () => included });
+    const { id } = await core.aiIdentify({ photos: [{ mediaType: 'image/jpeg', data: 'AAAA' }] });
+    for (let i = 0; i < 50 && core.job(id).status === 'running'; i++) await new Promise((r) => setTimeout(r, 10));
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(calls.map((c) => c.use)).size).toBe(1);
+    expect(calls[0]?.use).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('uses your own key instead when you add one', async () => {
+    const { calls, included } = fakeIncluded();
+    const own: string[] = [];
+    const core = CrateCore.fromApi(new MockDiscogs(), undefined, new MemoryStore(), () => ({
+      check: async () => undefined,
+      ask: async (o, model) => { own.push(`${o.task}:${model}`); return { output: { note: 'x', picks: [] } as never }; },
+    }), { includedAi: () => included });
+    await core.aiSetKey('sk-ant-test');
+    await core.aiSetModel('claude-opus-5-5');
+    expect(await core.aiStatus()).toMatchObject({ source: 'own', ownKey: true, model: 'claude-opus-5-5' });
+    await core.aiTonight({});
+    expect(own).toEqual(['tonight:claude-opus-5-5']);
+    expect(calls).toEqual([]);
+    await core.aiRemoveKey();
+    expect((await core.aiStatus()).source).toBe('included');
+  });
+});
+
+describe('AI server client', () => {
+  it('sends the task, checks the answer, and passes on the server\'s messages', async () => {
+    const { proxyBackend } = await import('./proxy');
+    const sent: { url: string; headers: Record<string, string>; body: unknown }[] = [];
+    let reply: { status: number; body: unknown } = { status: 200, body: { output: { note: 'Hi.', picks: [] }, allowance: { used: 2, limit: 150, resetsOn: '2026-12-01' } } };
+    const f = (async (url: string, init: RequestInit) => {
+      sent.push({ url, headers: init.headers as Record<string, string>, body: init.body ? JSON.parse(init.body as string) : undefined });
+      return new Response(JSON.stringify(reply.body), { status: reply.status });
+    }) as unknown as typeof fetch;
+    const p = proxyBackend('https://ai.example/', 'install-1', f);
+    const a = await p.ask({ task: 'tonight', content: 'mellow' }, 'claude-haiku-5-5', 'use-1');
+    expect(a.output).toEqual({ note: 'Hi.', picks: [] });
+    expect(a.allowance?.used).toBe(2);
+    expect(sent[0]).toMatchObject({ url: 'https://ai.example/v1/ask', headers: { 'x-install-id': 'install-1' }, body: { task: 'tonight', content: 'mellow', use: 'use-1' } });
+
+    reply = { status: 200, body: { output: { wrong: true } } };
+    await expect(p.ask({ task: 'tonight', content: 'x' }, 'claude-haiku-5-5')).rejects.toThrow(/couldn't be read/);
+    reply = { status: 429, body: { error: "You've used this month's 150 included AI uses." } };
+    await expect(p.ask({ task: 'tonight', content: 'x' }, 'claude-haiku-5-5')).rejects.toMatchObject({ status: 429, message: expect.stringMatching(/150 included/) });
+  });
+});

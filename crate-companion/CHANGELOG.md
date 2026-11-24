@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **AI without a key.** App builds can include AI through the new Crate Companion AI server
+  (`ai-server/`, a Cloudflare Worker): Haiku 5.5, 150 uses per install per month, with a monthly
+  budget for the whole app. Settings shows the uses left. A key of your own is still an option,
+  for no limit and a choice of model.
+- The AI's instructions now live in one place (`core/ai/tasks.ts`) as fixed tasks, which is what
+  the AI server accepts.
+
+- Fixed: Disconnect seemed to do nothing (the screen still said "Signed in as…" until the app was
+  restarted). The app now starts over at the sign-in screen.
 - Fixed: identifying a second album from photos (or a second search on Check an album) could
   leave a black screen until the app was restarted. If a page ever hits an error now, it shows a
   message with Try again instead.
