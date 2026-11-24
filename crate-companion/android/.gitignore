@@ -109,4 +109,5 @@ app/src/main/res/xml/config.xml
 # Release signing (never commit keys)
 *.jks
 *.keystore
+!app/debug.keystore
 keystore.properties

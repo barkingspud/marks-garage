@@ -20,6 +20,15 @@ android {
     // Release signing for the Play Store. The keystore comes from GitHub secrets in the build
     // workflow; without it, only the debug build (installable by hand) is produced.
     signingConfigs {
+        // One shared test key for debug builds, so a new test build installs over the old one.
+        // (Each GitHub runner would otherwise make its own key, and Android refuses the update.)
+        // It only signs test builds; Play Store builds use the release key below.
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
         release {
             if (System.getenv("ANDROID_KEYSTORE_FILE")) {
                 storeFile file(System.getenv("ANDROID_KEYSTORE_FILE"))
