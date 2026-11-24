@@ -189,20 +189,7 @@ function ReleaseSections({ d }: { d: ReleaseDetails }) {
         </section>
       )}
       {credits.length > 0 && <Credits credits={credits} />}
-      {ids.length > 0 && (
-        <section className="glass panel" aria-labelledby="h-ids">
-          <h2 id="h-ids">Identifying this pressing</h2>
-          <p className="sub small" style={{ marginTop: -4, marginBottom: 10 }}>Compare these with the barcode and the numbers etched near the label (the runout).</p>
-          <dl className="id-list">
-            {ids.map((x, i) => (
-              <div key={i}>
-                <dt>{x.type}{x.description ? `, ${x.description}` : ''}</dt>
-                <dd>{x.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
+      {ids.length > 0 && <Identifiers ids={ids} />}
       {notes && (
         <section className="glass panel" aria-labelledby="h-notes">
           <h2 id="h-notes">Notes</h2>
@@ -247,6 +234,48 @@ function runningTime(tracks: Track[]) {
   const m = Math.floor((total % 3600) / 60);
   const s = String(total % 60).padStart(2, '0');
   return `${n}, ${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${s}`;
+}
+
+const ID_PREVIEW = 3;
+type Ids = NonNullable<ReleaseDetails['identifiers']>;
+
+/**
+ * The few codes that identify a pressing fastest: one barcode and the first runout etchings,
+ * topped up in Discogs's order. Keeps Discogs's order.
+ */
+export function previewIds(ids: Ids, n = ID_PREVIEW): Ids {
+  if (ids.length <= n) return ids;
+  const pick = new Set<number>();
+  const barcode = ids.findIndex((x) => /^barcode/i.test(x.type));
+  if (barcode >= 0) pick.add(barcode);
+  ids.forEach((x, i) => { if (pick.size < n && /matrix|runout/i.test(x.type)) pick.add(i); });
+  ids.forEach((_, i) => { if (pick.size < n) pick.add(i); });
+  return ids.filter((_, i) => pick.has(i));
+}
+
+/** Barcodes, runout etchings and other codes. Long lists start collapsed. */
+function Identifiers({ ids }: { ids: Ids }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? ids : previewIds(ids);
+  return (
+    <section className="glass panel" aria-labelledby="h-ids">
+      <h2 id="h-ids">Identifying this pressing</h2>
+      <p className="sub small" style={{ marginTop: -4, marginBottom: 10 }}>Compare these with the barcode and the numbers etched near the label (the runout).</p>
+      <dl className="id-list" id="id-list">
+        {shown.map((x, i) => (
+          <div key={i}>
+            <dt>{x.type}{x.description ? `, ${x.description}` : ''}</dt>
+            <dd>{x.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {ids.length > ID_PREVIEW && (
+        <button className="btn small" style={{ marginTop: 12 }} onClick={() => setAll(!all)} aria-expanded={all} aria-controls="id-list">
+          {all ? 'Show fewer' : `Show all ${ids.length} details`}
+        </button>
+      )}
+    </section>
+  );
 }
 
 function Credits({ credits }: { credits: [string, string[]][] }) {
