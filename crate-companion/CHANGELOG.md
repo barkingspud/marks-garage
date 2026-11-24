@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Album pages have **Add to collection** for any release you don't own (from your wantlist, Check an
+  album or anywhere else). An album on your wantlist is removed from it when added.
+
 - Check an album: **Open album** for any pressing you find (not only ones you own), with its
   track listing, credits, price on Discogs and Add to wantlist.
 
