@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Adding Favorite shops is easier.** Type a seller name or paste a Discogs link (a shop page,
+  a profile or any listing); the app shows the shop (name, location, seller rating, items for
+  sale) before you add it. On Android, share a Discogs listing to Crate Companion from the
+  browser or the Discogs app to add its seller. With no shops yet, the screen explains where to
+  find them. Your shops are still kept only on your phone.
+
 - **Shared album notes.** Notes written by the included AI are kept on the AI server for that
   pressing, so the next person to open it sees them right away, free and without using any of
   their monthly AI uses. The first person still taps "Write notes with AI" (one use). Notes

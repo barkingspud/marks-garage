@@ -175,6 +175,9 @@ export class DiscogsClient implements DiscogsApi {
       'GET', `/marketplace/stats/${releaseId}`, { curr_abbr: currency }, 30 * MIN,
     );
   }
+  listing(listingId: number) {
+    return this.request<Awaited<ReturnType<DiscogsApi['listing']>>>('GET', `/marketplace/listings/${listingId}`, {}, 10 * MIN);
+  }
   inventoryPage(username: string, page: number, perPage = 100) {
     return this.request<Awaited<ReturnType<DiscogsApi['inventoryPage']>>>(
       'GET', `/users/${encodeURIComponent(username)}/inventory`,

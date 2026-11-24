@@ -3,6 +3,7 @@ import type { AiStatus, AiUsageReport, AlbumNotes, ListingReview, TonightResult 
 
 type Allowance = NonNullable<AiStatus['allowance']>;
 import type { KeyValueStore } from '../../core/auth/store';
+import type { SellerCard } from '../../shared/sellers';
 import type { CrateCore, Job as CoreJob, Status as CoreStatus } from '../../core/crate';
 import type { CollectionField, CollectionFolder, CollectionItem, Listing, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../../shared/discogs-types';
 
@@ -39,6 +40,8 @@ interface NativeBridge {
   scanBarcode?: () => Promise<string | null>;
   /** Keep the screen on (during long scans) or let it sleep again. */
   keepAwake?: (on: boolean) => void;
+  /** Text shared to the app from another app (a Discogs link): calls back now if any is waiting, and on each new share. */
+  onShare?: (cb: (text: string) => void) => void;
 }
 declare global {
   interface Window { crateNative?: NativeBridge }
@@ -117,6 +120,7 @@ export const api = {
     L ? local((c) => c.addWant(ids)) : call<{ ok: true; releaseId: number }>('/wants', { method: 'POST', body: JSON.stringify(ids) }),
   removeWant: (releaseId: number) => (L ? local((c) => c.removeWant(releaseId)) : call<{ ok: true }>(`/wants/${releaseId}`, { method: 'DELETE' })),
   stats: (releaseId: number) => (L ? local((c) => c.stats(releaseId)) : call<MarketplaceStats>(`/stats/${releaseId}`)),
+  lookupSeller: (q: string) => (L ? local((c) => c.lookupSeller(q)) : call<SellerCard>(`/sellers/lookup?q=${encodeURIComponent(q)}`)),
   startJob: (kind: JobKind, body: unknown = {}) => {
     if (L) {
       return local((c) => {

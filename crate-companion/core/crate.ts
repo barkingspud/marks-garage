@@ -1,6 +1,7 @@
 import type { MatchResult, RecommendResult } from '../shared/api-types';
 import type { CollectionField, CollectionFolder, CollectionItem, Listing, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../shared/discogs-types';
 import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
+import { parseSellerInput, type SellerCard } from '../shared/sellers';
 import type { AiFeature, AiRecommendResult, AiStatus, AiUsageEntry, AiUsageGroup, AiUsageReport, AlbumNotes, IdentifyResult, ListingReview, TonightResult } from '../shared/ai-types';
 import { costOf, DEFAULT_AI_MODEL, isAiModel, type AiModelId } from '../shared/ai-models';
 import { albumNotes, identify, notesContent, playTonight, recommendFor, reviewListings, type Photo } from './ai/features';
@@ -190,6 +191,34 @@ export class CrateCore {
     if (!img) throw new CrateError(404, 'Image unavailable');
     if (!hit) this.images.set(url.toString(), img, 24 * 60 * 60_000);
     return img;
+  }
+
+  /**
+   * Who a shop is, from a seller name or a Discogs link (seller page, profile or listing), so
+   * the app can show it before adding it to Favorite shops.
+   */
+  async lookupSeller(text: string): Promise<SellerCard> {
+    const input = parseSellerInput(text ?? '');
+    if (!input) throw new CrateError(400, "That isn't a Discogs seller name or a link to a shop or listing.");
+    let username: string;
+    if (input.kind === 'listing') {
+      const l = await this.api.listing(input.listingId).catch((e) => {
+        if (e instanceof DiscogsError && e.status === 404) throw new CrateError(404, "That listing isn't on Discogs anymore. Try a link to the seller instead.");
+        throw e;
+      });
+      username = l.seller.username;
+    } else {
+      username = input.username;
+    }
+    const p = await this.api.profile(username).catch((e) => {
+      if ((e as { status?: number }).status === 404) throw new CrateError(404, `There's no Discogs seller called ${username}.`);
+      throw e;
+    });
+    return {
+      username: p.username, name: p.name && p.name !== p.username ? p.name : undefined, location: p.location || undefined,
+      avatar: p.avatar_url || undefined, rating: p.seller_num_ratings ? p.seller_rating : undefined,
+      ratings: p.seller_num_ratings || undefined, forSale: p.num_for_sale,
+    };
   }
 
   async startMatch(body: { sellers?: string[]; criteria?: Partial<MatchCriteria>; maxPagesPerSeller?: number }): Promise<{ id: string }> {

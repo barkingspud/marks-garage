@@ -21,6 +21,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Share a Discogs link to Crate Companion: its seller is added to Favorite shops -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
             <!-- "Connect with Discogs": Discogs sends the user back to cratecompanion://auth -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

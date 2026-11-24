@@ -62,6 +62,7 @@ export function createApp(core: CrateCore) {
     return new Response(img.body, { headers: { 'Content-Type': img.type, 'Cache-Control': 'public, max-age=604800, immutable' } });
   });
   app.post('/jobs/match', async (c) => c.json(await core.startMatch(await c.req.json())));
+  app.get('/sellers/lookup', async (c) => c.json(await core.lookupSeller(c.req.query('q') ?? '')));
   app.post('/jobs/recommend', async (c) => c.json(await core.startRecommend()));
   app.get('/jobs/:id', (c) => c.json(core.job(c.req.param('id'))));
 

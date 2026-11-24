@@ -1,5 +1,6 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { api, mode, type Status } from '../api';
+import { useEffect } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { api, mode, native, type Status } from '../api';
 import { RoomProvider } from '../room';
 import { DisconnectButton } from './Disconnect';
 import { PageErrorBoundary } from './PageErrorBoundary';
@@ -26,6 +27,11 @@ const NAV = [
 
 export function Layout({ status }: { status: Status }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  // A Discogs link shared to the app (Android Share) goes to Favorite shops to add its seller.
+  useEffect(() => {
+    native?.onShare?.((text) => navigate(`/match?add=${encodeURIComponent(text)}`));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // Favorite shops lives under the wantlist.
   const inSection = (to: string) => to === '/wantlist' && pathname.startsWith('/match');
   return (
