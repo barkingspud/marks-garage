@@ -304,6 +304,13 @@ select.input option { background: #1b2028; }
 .status.yes { background: rgba(242,181,68,.18); border-color: rgba(242,181,68,.38); color: var(--amber); }
 .status-retry { color: var(--text); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
 .home-value { margin: 12px 0 0; }
+.shop-card { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px; padding: 14px 16px; border-radius: 16px; }
+.shop-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; box-shadow: var(--lift); }
+.shop-avatar-ph { display: grid; place-items: center; background: rgba(242,181,68,.18); color: var(--amber); font-weight: 700; }
+.shop-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 180px; }
+.shop-info b { overflow-wrap: anywhere; }
+.shop-actions { display: flex; align-items: center; gap: 8px; }
+.shops-help { margin: 0; max-width: 60ch; }
 .link-button { background: none; border: 0; padding: 8px 0; min-height: 40px; color: var(--amber); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; text-decoration: underline; text-underline-offset: .15em; }
 .price-error { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .pressing { display: flex; align-items: center; gap: 12px; min-height: 60px; border-top: 1px solid rgba(255,255,255,.09); cursor: pointer; }

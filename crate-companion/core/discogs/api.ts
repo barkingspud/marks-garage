@@ -51,6 +51,8 @@ export interface DiscogsApi {
   release(releaseId: number): Promise<ReleaseDetails>;
   marketplaceStats(releaseId: number, currency?: string): Promise<MarketplaceStats>;
   inventoryPage(username: string, page: number, perPage?: number): Promise<Paged<'listings', Listing>>;
+  /** One marketplace listing (to find its seller from a shared link). */
+  listing(listingId: number): Promise<Listing>;
   artistReleases(artistId: number, page?: number, perPage?: number): Promise<Paged<'releases', ArtistRelease>>;
   labelReleases(labelId: number, page?: number, perPage?: number): Promise<Paged<'releases', LabelRelease>>;
   master(masterId: number): Promise<{ id: number; main_release: number; title: string }>;

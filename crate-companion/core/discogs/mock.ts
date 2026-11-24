@@ -128,6 +128,7 @@ export class MockDiscogs implements DiscogsApi {
   async identity() { return { id: 1, username: USERNAME, resource_url: '' }; }
   async profile(username: string) {
     const s = sellers.find((x) => x.username === username);
+    if (!s && username !== USERNAME) throw Object.assign(new Error('User not found.'), { status: 404 });
     return {
       id: 1, username, name: username === USERNAME ? 'Demo Digger' : username,
       num_collection: collection.length, num_wantlist: wants.length,
@@ -209,6 +210,13 @@ export class MockDiscogs implements DiscogsApi {
     const listed = [...inventories.values()].flat().filter((l) => l.release.id === releaseId);
     const lowest = listed.length ? Math.min(...listed.map((l) => l.price.value)) : null;
     return { lowest_price: lowest === null ? null : { value: lowest, currency: 'USD' }, num_for_sale: listed.length + (releaseId % 7), blocked_from_sale: false };
+  }
+  async listing(listingId: number) {
+    for (const inv of inventories.values()) {
+      const hit = inv.find((l) => l.id === listingId);
+      if (hit) return hit;
+    }
+    throw Object.assign(new Error('Listing not found.'), { status: 404 });
   }
   async inventoryPage(username: string, p: number, perPage = 100) {
     await delay();

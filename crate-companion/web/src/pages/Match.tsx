@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { parseSellerInput, type SellerCard } from '../../../shared/sellers';
 import { GRADE_LABELS, MEDIA_GRADES, parseGrade, type Grade } from '../../../shared/conditions';
 import { buyerPrice, DEFAULT_CRITERIA, type MatchCriteria } from '../../../shared/matching';
 import type { MatchResult } from '../../../shared/api-types';
@@ -10,7 +11,7 @@ import { load, save, whenText } from '../storage';
 import { useJob } from '../useJob';
 import { useMutation } from '@tanstack/react-query';
 import type { ListingReview } from '../../../shared/ai-types';
-import { api } from '../api';
+import { api, native } from '../api';
 import { AiGate, Sparkle } from '../components/Ai';
 
 const VERDICT: Record<ListingReview['listings'][number]['verdict'], string> = { great: 'Great buy', good: 'Good', caution: 'Careful', skip: 'Skip' };
@@ -42,11 +43,37 @@ export function Match() {
 
   const update = (patch: Partial<Saved>) => setCfg((c) => { const n = { ...c, ...patch }; save('match', n); return n; });
   const setCrit = (patch: Partial<MatchCriteria>) => update({ criteria: { ...cfg.criteria, ...patch } });
+  // A name or a Discogs link: look the shop up and show it before adding it.
+  const lookup = useMutation({ mutationFn: (q: string) => api.lookupSeller(q) });
+  const candidate = lookup.data;
+  const alreadyAdded = !!candidate && cfg.sellers.some((s) => s.toLowerCase() === candidate.username.toLowerCase());
   function addSellers() {
-    const names = newSeller.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
-    update({ sellers: [...new Set([...cfg.sellers, ...names])] });
-    setNewSeller('');
+    const text = newSeller.trim();
+    if (!text) return;
+    const names = text.split(/[\s,]+/).filter(Boolean);
+    // Several plain names at once are added as typed; one name or a link is looked up first.
+    if (names.length > 1 && !/discogs\.com/i.test(text) && names.every((n) => parseSellerInput(n)?.kind === 'username')) {
+      update({ sellers: [...new Set([...cfg.sellers, ...names])] });
+      setNewSeller('');
+      return;
+    }
+    lookup.mutate(text);
   }
+  function addShop(s: SellerCard) {
+    update({ sellers: [...new Set([...cfg.sellers, s.username])] });
+    setNewSeller('');
+    lookup.reset();
+  }
+  // A Discogs link shared to the app arrives as ?add=…
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const shared = params.get('add');
+    if (!shared) return;
+    setEditing(true);
+    setNewSeller(shared);
+    lookup.mutate(shared);
+    setParams({}, { replace: true });
+  }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
   const run = () => { setEditing(false); void start({ sellers: cfg.sellers, criteria: cfg.criteria, maxPagesPerSeller: cfg.maxPages }); };
 
   const showSetup = !running && (!result || editing);
@@ -83,15 +110,45 @@ export function Match() {
             <form className="toolbar" onSubmit={(e) => { e.preventDefault(); addSellers(); }}>
               <label className="field-glass">
                 <span className="sr-only">Seller usernames</span>
-                <input placeholder="Seller username(s) on Discogs" value={newSeller} onChange={(e) => setNewSeller(e.target.value)} />
+                <input placeholder="Seller name or Discogs link" value={newSeller} onChange={(e) => { setNewSeller(e.target.value); if (lookup.data || lookup.error) lookup.reset(); }} />
               </label>
-              <button type="submit" className="btn" disabled={!newSeller.trim()}>Add</button>
+              <button type="submit" className="btn" disabled={!newSeller.trim() || lookup.isPending}>{lookup.isPending ? 'Looking…' : 'Add'}</button>
             </form>
+            <ErrorBox error={lookup.error} />
+            {candidate && (
+              <div className="shop-card glass" aria-live="polite">
+                {candidate.avatar
+                  ? <img className="shop-avatar" src={candidate.avatar} alt="" />
+                  : <span className="shop-avatar shop-avatar-ph" aria-hidden>{candidate.username.slice(0, 1).toUpperCase()}</span>}
+                <div className="shop-info">
+                  <b>{candidate.username}</b>
+                  <span className="sub small">{[candidate.name, candidate.location].filter(Boolean).join(' · ') || 'Discogs seller'}</span>
+                  <span className="sub small">
+                    {[
+                      candidate.rating !== undefined && candidate.ratings ? `${candidate.rating}% from ${candidate.ratings.toLocaleString()} ratings` : 'No seller ratings yet',
+                      candidate.forSale === undefined ? null : candidate.forSale ? `${candidate.forSale.toLocaleString()} for sale` : 'Nothing for sale right now',
+                    ].filter(Boolean).join(' · ')}
+                  </span>
+                </div>
+                <div className="shop-actions">
+                  {alreadyAdded
+                    ? <span className="sub small">Already in your shops</span>
+                    : <button type="button" className="btn primary small" onClick={() => addShop(candidate)}>Add shop</button>}
+                  <button type="button" className="btn small" onClick={() => { lookup.reset(); setNewSeller(''); }}>{alreadyAdded ? 'OK' : 'Cancel'}</button>
+                </div>
+              </div>
+            )}
             <div className="chip-row" style={{ marginTop: 12 }}>
               {cfg.sellers.map((s) => (
                 <span key={s} className="chip static">{s}<button className="chip-x" aria-label={`Remove ${s}`} onClick={() => update({ sellers: cfg.sellers.filter((x) => x !== s) })}>×</button></span>
               ))}
-              {!cfg.sellers.length && <span className="sub">No shops yet. Sellers you've bought from before are a good start.</span>}
+              {!cfg.sellers.length && !candidate && (
+                <p className="sub small shops-help">
+                  Add a shop by its Discogs seller name, or paste a link to the shop or to any of its listings.
+                  Good places to start: sellers you've bought from, the seller on any Discogs listing you like,
+                  or your local record store if it sells on Discogs.{native?.onShare ? ' You can also share a Discogs listing to Crate Companion from your browser or the Discogs app.' : ''}
+                </p>
+              )}
             </div>
             <label className="field" style={{ marginTop: 14, maxWidth: 320 }}>
               Pages per shop (100 newest listings each)

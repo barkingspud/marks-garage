@@ -1,6 +1,6 @@
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { Capacitor, CapacitorHttp, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { BarcodeFormat, BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
@@ -53,6 +53,17 @@ async function scanBarcode(): Promise<string | null> {
   return barcodes[0]?.rawValue ?? barcodes[0]?.displayValue ?? null;
 }
 
+/** Text shared to the app (see ShareIntentPlugin.java). */
+const ShareIntent = registerPlugin<{
+  take(): Promise<{ text?: string | null }>;
+  addListener(event: 'shared', cb: (d: { text: string }) => void): Promise<PluginListenerHandle>;
+}>('ShareIntent');
+
+function onShare(cb: (text: string) => void) {
+  void ShareIntent.addListener('shared', (d) => { if (d.text) cb(d.text); });
+  void ShareIntent.take().then((d) => { if (d.text) cb(d.text); }).catch(() => undefined);
+}
+
 /** Back from discogs.com: reload the app with the sign-in parameters; main.tsx finishes it. */
 function handleReturn(url: string) {
   if (!url.startsWith(CALLBACK)) return;
@@ -73,6 +84,7 @@ if (Capacitor.isNativePlatform()) {
     callbackUrl: CALLBACK,
     scanBarcode,
     keepAwake: (on) => { void (on ? KeepAwake.keepAwake() : KeepAwake.allowSleep()).catch(() => undefined); },
+    onShare,
   };
   void App.addListener('appUrlOpen', ({ url }) => handleReturn(url));
   // If Android closed the app while the user was on discogs.com, it starts again with the link.
