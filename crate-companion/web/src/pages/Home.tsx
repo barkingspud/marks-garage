@@ -33,16 +33,16 @@ export function Home() {
       <div className="home-top">
         <div className="home-hello">
           <h1>{greeting()}, {first}</h1>
-          <p className="sub">{(profile.num_collection ?? 0).toLocaleString()} records. Put one on.</p>
+          <p className="sub">{(profile.num_collection ?? 0).toLocaleString()} albums. Put one on.</p>
         </div>
-        <Link to="/check" className="btn icon" aria-label="Check a record"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg></Link>
+        <Link to="/check" className="btn icon" aria-label="Check an album"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg></Link>
       </div>
 
-      {coll.isLoading && <Loading label="Pulling your latest records…" />}
+      {coll.isLoading && <Loading label="Pulling your latest albums…" />}
       <ErrorBox error={coll.error} />
       {b && (
         <section className="home-hero" aria-label="Last added">
-          <Link to={`/record/${b.id}`} aria-label={`${b.title} by ${artistLine(b)}. Open record.`}>
+          <Link to={`/record/${b.id}`} aria-label={`${b.title} by ${artistLine(b)}. Open album.`}>
             <RecordHero src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={b.labels[0]?.name} />
           </Link>
           <div className="home-hero-text">
@@ -51,8 +51,8 @@ export function Home() {
             <span className="artist">{artistLine(b)}{b.year ? `, ${b.year}` : ''}</span>
             {b.labels[0] && <span className="sub">{b.labels[0].name} {b.labels[0].catno}</span>}
             <div className="page-actions" style={{ marginTop: 10 }}>
-              <Link to={`/record/${b.id}`} className="btn primary">Open record</Link>
-              <Link to="/collection" className="btn">All {(profile.num_collection ?? 0).toLocaleString()} records</Link>
+              <Link to={`/record/${b.id}`} className="btn primary">Open album</Link>
+              <Link to="/collection" className="btn">All {(profile.num_collection ?? 0).toLocaleString()} albums</Link>
             </div>
           </div>
         </section>

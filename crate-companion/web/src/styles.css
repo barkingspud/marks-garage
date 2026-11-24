@@ -371,3 +371,4 @@ select.input option { background: #1b2028; }
   .credits > div, .id-list > div { grid-template-columns: 1fr; gap: 2px; }
 }
 .tag.tag-inline { position: static; flex: 0 0 auto; align-self: center; }
+.notes.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; line-clamp: 5; overflow: hidden; }

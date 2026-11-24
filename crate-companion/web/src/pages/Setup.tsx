@@ -30,7 +30,7 @@ export function Setup({ status, error: startError }: { status: Status; error?: s
               <button className="btn primary" disabled={connect.isPending} onClick={() => connect.mutate()}>
                 {connect.isPending ? 'Opening Discogs…' : 'Connect with Discogs'}
               </button>
-              <p className="sub small">It can read your collection and wantlist, and add or remove records when you ask it to.</p>
+              <p className="sub small">It can read your collection and wantlist, and add or remove albums when you ask it to.</p>
             </>
           ) : mode === 'server' ? (
             <>

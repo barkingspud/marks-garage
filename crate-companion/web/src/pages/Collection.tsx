@@ -60,7 +60,7 @@ export function Collection() {
 
   return (
     <div className="page">
-      <PageHeader title="My collection" sub={coll.data ? `${items.length.toLocaleString()} records${shown.length !== items.length ? `, ${shown.length} shown` : ''}` : undefined}>
+      <PageHeader title="My collection" sub={coll.data ? `${items.length.toLocaleString()} albums${shown.length !== items.length ? `, ${shown.length} shown` : ''}` : undefined}>
         {(folders.data?.folders.length ?? 0) > 2 && (
           <select className="input" style={{ width: 'auto' }} value={folder} onChange={(e) => setFolder(Number(e.target.value))} aria-label="Folder">
             {folders.data!.folders.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.count})</option>)}
@@ -93,7 +93,7 @@ export function Collection() {
 
       {coll.isLoading && <Loading label="Loading your collection (big collections take a moment)…" />}
       <ErrorBox error={coll.error} />
-      {coll.data && !items.length && <Empty title="This folder is empty">Records you add to it on Discogs show up here.</Empty>}
+      {coll.data && !items.length && <Empty title="This folder is empty">Albums you add to it on Discogs show up here.</Empty>}
       {coll.data && items.length > 0 && !shown.length && <Empty title="Nothing matches">Try a shorter search, or choose All styles.</Empty>}
 
       <div className="with-panel">
@@ -142,7 +142,7 @@ function SidePanel({ item, fields }: { item: CollectionItem; fields: Parameters<
   const b = item.basic_information;
   const g = myGrades(item, fields);
   return (
-    <aside className="detail-panel glass" aria-label="Selected record">
+    <aside className="detail-panel glass" aria-label="Selected album">
       <RecordHero src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} />
       <div>
         <h2 style={{ fontSize: 28 }}>{b.title}</h2>
@@ -152,13 +152,13 @@ function SidePanel({ item, fields }: { item: CollectionItem; fields: Parameters<
       <RateRecord item={item} />
       {(g.media || g.sleeve) && (
         <div className="chip-row">
-          {g.media && <GradeChip label="Record" grade={g.media.grade} />}
+          {g.media && <GradeChip label="Vinyl" grade={g.media.grade} />}
           {g.sleeve && <GradeChip label="Sleeve" grade={g.sleeve.grade} />}
         </div>
       )}
       <div className="chip-row">{(b.styles ?? []).map((s) => <span key={s} className="chip static">{s}</span>)}</div>
       <div className="page-actions">
-        <Link to={`/record/${b.id}`} className="btn primary">Open record</Link>
+        <Link to={`/record/${b.id}`} className="btn primary">Open album</Link>
         <a className="btn" href={`https://www.discogs.com/release/${b.id}`} target="_blank" rel="noreferrer">On Discogs</a>
       </div>
     </aside>

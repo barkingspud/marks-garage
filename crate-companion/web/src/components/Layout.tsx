@@ -41,7 +41,7 @@ export function Layout({ status }: { status: Status }) {
                 ))}
               </nav>
               <div className="side-foot">
-                <NavLink to="/check" className="btn"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg>Check a record</NavLink>
+                <NavLink to="/check" className="btn"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg>Check an album</NavLink>
                 <div className="who">
                   {status.mock ? <span>Demo data</span> : status.username && <span>Signed in as <b>{status.username}</b></span>}
                   {status.mock && mode === 'local' && <button className="btn small" onClick={() => { forgetJobResults(); api.setDemo(false); }}>Leave demo</button>}

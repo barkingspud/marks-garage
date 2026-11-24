@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The app says "albums" instead of "records" (Check an album, Open album, 374 albums). The
+  disc's condition grade is labeled "Vinyl" (next to "Sleeve").
+- Long release notes show the first five lines, with "Show more" for the rest.
+
 **Record details, ratings and kept results.**
 
 - Record pages show the track listing (with running time), credits, the barcode and runout

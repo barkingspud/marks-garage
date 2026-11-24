@@ -69,7 +69,7 @@ export function Check() {
 
   return (
     <div className="page" style={{ maxWidth: 760 }}>
-      <PageHeader title="Check a record" sub="In a shop? Find the pressing in your hand and see if the price is fair." />
+      <PageHeader title="Check an album" sub="In a shop? Find the pressing in your hand and see if the price is fair." />
 
       <form className="toolbar" onSubmit={(e) => { e.preventDefault(); submit(); }} role="search">
         <label className="field-glass">
@@ -125,7 +125,7 @@ export function Check() {
             <h2 id="h-fair">Is it a fair price?</h2>
             <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
               <label className="field">Shop price<input className="input" inputMode="decimal" placeholder="12.00" value={price} onChange={(e) => setPrice(e.target.value)} /></label>
-              <label className="field">Record<select className="input" value={media} onChange={(e) => setMedia(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
+              <label className="field">Vinyl<select className="input" value={media} onChange={(e) => setMedia(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
               <label className="field">Sleeve<select className="input" value={sleeve} onChange={(e) => setSleeve(e.target.value)}>{MEDIA_GRADES.map((g) => <option key={g}>{g}</option>)}</select></label>
             </div>
             <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }} aria-live="polite">
