@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { api, mode, type Status } from '../api';
 import { RoomProvider } from '../room';
 import { DisconnectButton } from './Disconnect';
@@ -19,11 +19,13 @@ const NAV = [
   { to: '/', label: 'Home', icon: ICONS.home },
   { to: '/collection', label: 'Collection', icon: ICONS.collection },
   { to: '/wantlist', label: 'Wantlist', icon: ICONS.wantlist },
-  { to: '/match', label: 'Sellers', icon: ICONS.sellers },
   { to: '/discover', label: 'Discover', icon: ICONS.discover },
 ];
 
 export function Layout({ status }: { status: Status }) {
+  const { pathname } = useLocation();
+  // Favorite shops lives under the wantlist.
+  const inSection = (to: string) => to === '/wantlist' && pathname.startsWith('/match');
   return (
     <RoomProvider>
       {(style) => (
@@ -33,7 +35,7 @@ export function Layout({ status }: { status: Status }) {
               <NavLink to="/" className="brand"><span className="brand-disc" aria-hidden /> Crate Companion</NavLink>
               <nav aria-label="Main" className="side-nav">
                 {NAV.map((n) => (
-                  <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}>
+                  <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => `side-link${isActive || inSection(n.to) ? ' active' : ''}`}>
                     <Icon d={n.icon} />{n.label}
                   </NavLink>
                 ))}
@@ -57,7 +59,7 @@ export function Layout({ status }: { status: Status }) {
           </div>
           <nav aria-label="Main" className="tabbar glass glass-blur">
             {NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
+              <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => `tab${isActive || inSection(n.to) ? ' active' : ''}`}>
                 <Icon d={n.icon} /><span>{n.label}</span>
               </NavLink>
             ))}

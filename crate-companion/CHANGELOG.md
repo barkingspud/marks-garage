@@ -10,6 +10,7 @@
 - Rate your records (1 to 5 stars) on the record page and in the collection side panel.
   Ratings save to Discogs and show in the collection list view.
 - The wantlist has a list view, like the collection.
+- Sellers moved off the bottom bar: it's now "Favorite shops", opened from the Wantlist.
 - Recommendations and seller scans keep running when you switch pages, and the last result
   is kept until you run it again (also after closing the app).
 

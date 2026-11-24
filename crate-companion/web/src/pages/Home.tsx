@@ -81,7 +81,7 @@ export function Home() {
             {value ? <>Discogs values your collection at about <b className="amber">{value.median}</b> ({value.minimum} to {value.maximum}).</> : 'Collection value unavailable.'}
           </p>
           <div className="page-actions" style={{ marginTop: 14 }}>
-            <Link to="/match" className="btn primary">Find your wants for sale</Link>
+            <Link to="/match" className="btn primary">Check my favorite shops</Link>
             <Link to="/discover" className="btn">Get recommendations</Link>
           </div>
         </section>

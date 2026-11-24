@@ -128,7 +128,7 @@ export function Record() {
             {!owned && forSale > 0 && (
               <a className="btn primary" href={`https://www.discogs.com/sell/release/${id}`} target="_blank" rel="noreferrer">See the {forSale} listing{forSale === 1 ? '' : 's'}</a>
             )}
-            {wanted && !owned && <Link className="btn" to="/match">Check my sellers</Link>}
+            {wanted && !owned && <Link className="btn" to="/match">Check my favorite shops</Link>}
             {!owned && !wanted && (
               <button className="btn" disabled={addWant.isPending || addWant.isSuccess} onClick={() => addWant.mutate()}>
                 {addWant.isSuccess ? 'Added to wantlist' : 'Add to wantlist'}

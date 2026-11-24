@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { GRADE_LABELS, MEDIA_GRADES, parseGrade, type Grade } from '../../../shared/conditions';
 import { buyerPrice, DEFAULT_CRITERIA, type MatchCriteria } from '../../../shared/matching';
 import type { MatchResult } from '../../../shared/api-types';
@@ -40,9 +41,12 @@ export function Match() {
 
   return (
     <div className="page" style={{ maxWidth: 900 }}>
+      <Link className="btn back" to="/wantlist">
+        <svg viewBox="0 0 24 24" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>Wantlist
+      </Link>
       <PageHeader
-        title="Sellers"
-        sub={result && !editing ? `${new Set(result.matches.map((m) => m.listing.release.id)).size} of your ${result.wantsCount} wants found in ${result.sellers.filter((s) => !s.error).length} shop${result.sellers.length === 1 ? '' : 's'}${finishedAt ? `, scanned ${whenText(finishedAt)}` : ''}` : 'Look for your wants in the shops you trust.'}
+        title="Favorite shops"
+        sub={result && !editing ? `${new Set(result.matches.map((m) => m.listing.release.id)).size} of your ${result.wantsCount} wants found in ${result.sellers.filter((s) => !s.error).length} shop${result.sellers.length === 1 ? '' : 's'}${finishedAt ? `, scanned ${whenText(finishedAt)}` : ''}` : 'Look for your wants in the Discogs shops you trust. Add their seller names once; they\'re remembered.'}
       >
         {result && !editing && !running && (
           <>
