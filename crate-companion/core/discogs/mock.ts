@@ -118,6 +118,9 @@ function page<T>(items: T[], pageNo: number, perPage: number): { pagination: Pag
 }
 const delay = () => new Promise((res) => setTimeout(res, 40));
 
+/** Demo seller usernames (for tests). */
+export const SELLER_NAMES = sellers.map((s) => s.username);
+
 export class MockDiscogs implements DiscogsApi {
   readonly isMock = true;
   async image() { return null; }
@@ -241,6 +244,7 @@ export class MockDiscogs implements DiscogsApi {
       .filter((b) => (!params.style || b.styles?.includes(params.style)) && (!params.genre || b.genres?.includes(params.genre)))
       .filter((b) => !params.label || b.labels.some((l) => l.name === params.label))
       .filter((b) => !params.artist || b.artists[0]!.name === params.artist)
+      .filter((b) => !params.release_title || b.title.toLowerCase() === params.release_title.toLowerCase())
       .filter((b) => !params.q || `${b.artists[0]!.name} ${b.title}`.toLowerCase().includes(params.q.toLowerCase()))
       .filter((b) => !params.catno || b.labels.some((l) => (l.catno ?? '').toLowerCase() === params.catno!.toLowerCase()))
       .filter((b) => !from || (b.year >= from && b.year <= (to || from)))

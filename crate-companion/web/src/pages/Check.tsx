@@ -1,13 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MEDIA_GRADES } from '../../../shared/conditions';
 import type { SearchResult } from '../../../shared/discogs-types';
 import { api, native } from '../api';
 import { Cover } from '../components/Cover';
 import { ICONS } from '../components/Layout';
-import { Empty, ErrorBox, Loading, PageHeader, money } from '../components/ui';
+import { DiscProgress, Empty, ErrorBox, Loading, PageHeader, money } from '../components/ui';
+import { AiGate, Sparkle, useAiStatus } from '../components/Ai';
+import type { IdentifyResult } from '../../../shared/ai-types';
+import { toPhoto } from '../photo';
 import { useRoom } from '../room';
+import { useJob } from '../useJob';
 
 const split = (t: string) => { const i = t.indexOf(' - '); return i > 0 ? { artist: t.slice(0, i).replace(/\*$/, '').replace(/ \(\d+\)$/, ''), title: t.slice(i + 3) } : { artist: '', title: t }; };
 
@@ -22,6 +26,23 @@ export function Check() {
   const [sleeve, setSleeve] = useState('VG+');
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  /** Where the pressings on screen came from: a typed or scanned search, or the AI reading photos. */
+  const [source, setSource] = useState<'search' | 'ai'>('search');
+  const ai = useJob<IdentifyResult>('ai-identify');
+  const aiOn = useAiStatus().data?.configured;
+  const photoInput = useRef<HTMLInputElement>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  async function identifyPhotos(files: FileList | null) {
+    setPhotoError(null);
+    if (!files?.length) return;
+    try {
+      const photos = await Promise.all([...files].slice(0, 4).map((f) => toPhoto(f)));
+      setSource('ai');
+      void ai.start({ photos });
+    } catch {
+      setPhotoError("Couldn't read that photo. Try another one.");
+    }
+  }
   /** The app uses Google's native scanner; browsers fall back to the camera in the page. */
   async function scan() {
     setScanError(null);
@@ -44,12 +65,15 @@ export function Check() {
   });
   useRoom(pick ? pick.cover_image || pick.thumb : null, 232);
 
-  useEffect(() => { setPick(search.data?.results[0] ?? null); bought.reset(); }, [search.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const aiFound = useMemo(() => (source === 'ai' && ai.result ? { total: ai.result.candidates.length, results: ai.result.candidates } : undefined), [source, ai.result]);
+  const found = source === 'ai' ? aiFound : search.data;
+  useEffect(() => { setPick(found?.results[0] ?? null); bought.reset(); }, [found]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function submit(value = text) {
     const v = value.trim();
     if (!v) return;
     const digits = v.replace(/[\s-]/g, '');
+    setSource('search');
     setQuery(/^\d{8,14}$/.test(digits) ? { barcode: digits } : { q: v });
   }
 
@@ -80,14 +104,28 @@ export function Check() {
         <button type="button" className="btn icon" aria-label="Scan barcode" onClick={() => void scan()}>
           <svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg>
         </button>
+        {aiOn && (
+          <button type="button" className="btn icon" aria-label="Identify from photos" onClick={() => photoInput.current?.click()}>
+            <svg viewBox="0 0 24 24" aria-hidden><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /></svg>
+          </button>
+        )}
         <button type="submit" className="btn primary" disabled={!text.trim()}>Find</button>
       </form>
+      <input ref={photoInput} type="file" accept="image/*" multiple hidden onChange={(e) => { void identifyPhotos(e.target.files); e.target.value = ''; }} />
+      {!aiOn && <AiGate what="identify the exact pressing from photos of the cover, label or runout">{null}</AiGate>}
+      {aiOn && source === 'search' && !search.data && !search.isFetching && (
+        <p className="sub small ai-hint"><Sparkle />Tap the camera to identify a pressing from photos: the cover, the label, the barcode or the runout (up to 4).</p>
+      )}
+      <ErrorBox error={photoError} />
+      {source === 'ai' && ai.progress && <section className="glass panel"><DiscProgress {...ai.progress} /></section>}
+      {source === 'ai' && <ErrorBox error={ai.error} />}
+      {source === 'ai' && ai.result && !ai.running && <AiVerdict r={ai.result} />}
       <ErrorBox error={scanError} />
       {scanning && <Scanner onCode={(c) => { setScanning(false); setText(c); submit(c); }} onClose={() => setScanning(false)} />}
 
-      {search.isFetching && <Loading label="Searching Discogs…" />}
-      <ErrorBox error={search.error} />
-      {search.data && !search.data.results.length && <Empty title="No releases found">Try the catalog number from the spine or label, or the barcode digits.</Empty>}
+      {source === 'search' && search.isFetching && <Loading label="Searching Discogs…" />}
+      {source === 'search' && <ErrorBox error={search.error} />}
+      {source === 'search' && search.data && !search.data.results.length && <Empty title="No releases found">Try the catalog number from the spine or label, or the barcode digits.</Empty>}
 
       {pick && head && (
         <>
@@ -109,7 +147,7 @@ export function Check() {
           <fieldset className="glass panel" style={{ margin: 0 }}>
             <legend className="sr-only">Which pressing is in your hand?</legend>
             <h3 aria-hidden>Which pressing is in your hand?</h3>
-            {search.data!.results.slice(0, 6).map((r) => (
+            {found!.results.slice(0, 6).map((r) => (
               <label key={r.id} className="pressing">
                 <input type="radio" name="pressing" checked={pick.id === r.id} onChange={() => setPick(r)} />
                 <span><b>{[r.label?.[0], r.catno].filter(Boolean).join(' ') || split(r.title).title}</b>
@@ -117,7 +155,7 @@ export function Check() {
               </label>
             ))}
             <p className="sub small" style={{ marginTop: 10 }}>
-              {search.data!.total > 6 ? `${search.data!.total} releases match. ` : ''}Many pressings share a catalog number: compare the runout etched near the label.
+              {found!.total > 6 ? `${found!.total} releases match. ` : ''}Many pressings share a catalog number: compare the runout etched near the label.
             </p>
           </fieldset>
 
@@ -154,6 +192,22 @@ export function Check() {
         </>
       )}
     </div>
+  );
+}
+
+/** What the AI made of the photos: its best match, how sure it is, and what to check. */
+function AiVerdict({ r }: { r: IdentifyResult }) {
+  const seen = [r.seen.artist, r.seen.title].filter(Boolean).join(', ');
+  const codes = [...r.seen.catalogNumbers, ...(r.seen.barcode ? [r.seen.barcode] : []), ...r.seen.runout];
+  return (
+    <section className="glass panel ai-verdict" aria-labelledby="h-ai-verdict">
+      <h2 id="h-ai-verdict"><Sparkle />{r.bestReleaseId ? 'Best match' : 'No sure match'}
+        {r.bestReleaseId && <span className={`status ${r.confidence === 'high' ? 'yes' : ''}`}>{r.confidence === 'high' ? 'Confident' : r.confidence === 'medium' ? 'Fairly sure' : 'Not sure'}</span>}
+      </h2>
+      <p>{r.reasoning}</p>
+      {r.check && <p className="sub">{r.check}</p>}
+      {(seen || codes.length > 0) && <p className="sub small">Read from the photos: {[seen, ...codes].filter(Boolean).join(' · ')}</p>}
+    </section>
   );
 }
 

@@ -9,6 +9,9 @@ import { Empty, ErrorBox, GradeMeter, Loading, artistLine, discogsUrl, formatLin
 import { groupCredits, plainNotes } from '../discogs-text';
 import { myGrades } from '../grades';
 import { useRoom } from '../room';
+import { AiGate, Sparkle } from '../components/Ai';
+import type { AlbumNotes } from '../../../shared/ai-types';
+import { load, save } from '../storage';
 
 /**
  * One record: yours (rating, grades), wanted (what it costs right now), or any other
@@ -141,10 +144,51 @@ export function Record() {
         </div>
       </div>
 
+      <AiNotes id={id} />
       {rel.isLoading && <Loading label="Loading the track listing…" />}
       {rel.error && !d ? <ErrorBox error={rel.error} /> : null}
       {d && <ReleaseSections d={d} />}
     </div>
+  );
+}
+
+/** The AI's notes on the album and this pressing, kept on the device once written. */
+function AiNotes({ id }: { id: number }) {
+  const storeKey = `ai-notes-${id}`;
+  const [notes, setNotes] = useState<AlbumNotes | null>(() => load<{ n?: AlbumNotes }>(storeKey, {}).n ?? null);
+  const write = useMutation({
+    mutationFn: () => api.ai.notes(id),
+    onSuccess: (n) => { setNotes(n); save(storeKey, { n }); },
+  });
+  return (
+    <section className="glass panel ai-notes" aria-labelledby="h-ai-notes">
+      <h2 id="h-ai-notes"><Sparkle />About this album</h2>
+      <AiGate what="write notes on this album and pressing">
+        {notes ? (
+          <>
+            <p>{notes.about}</p>
+            {notes.listenFor.length > 0 && (
+              <>
+                <h3>Listen for</h3>
+                <ul>{notes.listenFor.map((x, i) => <li key={i}>{x}</li>)}</ul>
+              </>
+            )}
+            <h3>This pressing</h3>
+            <p>{notes.thisPressing}</p>
+            {notes.caveat && <p className="sub small">{notes.caveat}</p>}
+            <p className="sub small">Written by AI from what it knows and the Discogs data. It can be wrong.</p>
+          </>
+        ) : (
+          <>
+            <p className="sub">Why the album matters, what to listen for, and what's notable about this pressing.</p>
+            <button className="btn primary" style={{ marginTop: 10 }} disabled={write.isPending} onClick={() => write.mutate()}>
+              {write.isPending ? 'Writing…' : 'Write notes with AI'}
+            </button>
+          </>
+        )}
+        <ErrorBox error={write.error} />
+      </AiGate>
+    </section>
   );
 }
 

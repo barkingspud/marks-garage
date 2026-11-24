@@ -18,6 +18,8 @@ export interface SearchParams {
   barcode?: string;
   /** Artist name (fuzzy match; Discogs ignores the " (2)" suffix form). */
   artist?: string;
+  /** Album title (with type=master or release). */
+  release_title?: string;
   /** Label name (matched by name, not id). */
   label?: string;
   sort?: 'have' | 'want' | 'year' | 'title';

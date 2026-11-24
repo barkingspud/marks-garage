@@ -1,8 +1,8 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { api, native, type Job } from './api';
+import { api, native, type Job, type JobKind } from './api';
 import { load, remove, save } from './storage';
 
-type Kind = 'match' | 'recommend';
+type Kind = JobKind;
 interface Entry {
   /** The job being polled, if one is running. */
   activeId: string | null;
@@ -17,10 +17,13 @@ interface Entry {
  * kept) when you switch to another page. The last result is also saved on the device, so
  * it's still there next time you open the app.
  */
-const KINDS: Kind[] = ['match', 'recommend'];
+const KINDS: Kind[] = ['match', 'recommend', 'ai-identify', 'ai-recommend'];
+/** Results worth keeping after the app closes. (A photo check is only for the moment.) */
+const SAVED = new Set<Kind>(['match', 'recommend', 'ai-recommend']);
 const savedKey = (k: Kind) => `last-${k}`;
 
 function fromSaved(kind: Kind): Entry {
+  if (!SAVED.has(kind)) return { activeId: null, job: null, error: null, finishedAt: null };
   const s = load<{ result?: unknown; at?: number }>(savedKey(kind), {});
   if (s.result === undefined) return { activeId: null, job: null, error: null, finishedAt: null };
   return {
@@ -54,7 +57,7 @@ async function poll(kind: Kind, id: string) {
     }
     const at = Date.now();
     set(kind, { job: j, activeId: null, finishedAt: at, error: j.error ?? null });
-    if (j.status === 'done') save(savedKey(kind), { result: j.result, at });
+    if (j.status === 'done' && SAVED.has(kind)) save(savedKey(kind), { result: j.result, at });
   } catch (e) {
     if (state[kind].activeId !== id) return;
     set(kind, { activeId: null, error: (e as Error).message });

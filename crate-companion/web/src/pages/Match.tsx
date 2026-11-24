@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GRADE_LABELS, MEDIA_GRADES, parseGrade, type Grade } from '../../../shared/conditions';
 import { buyerPrice, DEFAULT_CRITERIA, type MatchCriteria } from '../../../shared/matching';
@@ -8,6 +8,12 @@ import { DiscProgress, Empty, ErrorBox, GradeChip, PageHeader, money } from '../
 import { useRoom } from '../room';
 import { load, save, whenText } from '../storage';
 import { useJob } from '../useJob';
+import { useMutation } from '@tanstack/react-query';
+import type { ListingReview } from '../../../shared/ai-types';
+import { api } from '../api';
+import { AiGate, Sparkle } from '../components/Ai';
+
+const VERDICT: Record<ListingReview['listings'][number]['verdict'], string> = { great: 'Great buy', good: 'Good', caution: 'Careful', skip: 'Skip' };
 
 interface Saved { sellers: string[]; criteria: MatchCriteria; maxPages: number }
 
@@ -18,6 +24,20 @@ export function Match() {
   const [shipsText, setShipsText] = useState(() => cfg.criteria.shipsFrom.join(', '));
   const [editing, setEditing] = useState(false);
   const { result, finishedAt, progress, error, running, start } = useJob<MatchResult>('match');
+  // The AI's review belongs to one scan; it's kept until the next scan.
+  const [review, setReview] = useState<ListingReview | null>(() => {
+    const r = load<{ at?: number; review?: ListingReview }>('ai-review', {});
+    return r.review && r.at === finishedAt ? r.review : null;
+  });
+  const reviewIt = useMutation({
+    mutationFn: () => api.ai.review(result!.matches.slice(0, 60).map((m) => m.listing)),
+    onSuccess: (r) => { setReview(r); save('ai-review', { at: finishedAt, review: r }); },
+  });
+  useEffect(() => {
+    const r = load<{ at?: number; review?: ListingReview }>('ai-review', {});
+    setReview(r.review && r.at === finishedAt ? r.review : null);
+  }, [finishedAt]);
+  const verdicts = new Map(review?.listings.map((v) => [v.listingId, v]));
   useRoom(null, 268);
 
   const update = (patch: Partial<Saved>) => setCfg((c) => { const n = { ...c, ...patch }; save('match', n); return n; });
@@ -127,6 +147,22 @@ export function Match() {
               </div>
             ))}
           </div>
+          {result.matches.length > 0 && (
+            <section className="glass panel ai-review" aria-labelledby="h-ai-review">
+              <h2 id="h-ai-review"><Sparkle />AI review</h2>
+              <AiGate what="read the sellers' notes and tell you which listings are worth buying">
+                {review ? <p>{review.summary}</p> : (
+                  <>
+                    <p className="sub">Have the AI read every listing, including the sellers' own notes, and flag the best buys and the ones to avoid.</p>
+                    <button className="btn primary" style={{ marginTop: 10 }} disabled={reviewIt.isPending} onClick={() => reviewIt.mutate()}>
+                      {reviewIt.isPending ? 'Reading the listings…' : `Review ${Math.min(60, result.matches.length)} listing${result.matches.length === 1 ? '' : 's'}`}
+                    </button>
+                  </>
+                )}
+                <ErrorBox error={reviewIt.error} />
+              </AiGate>
+            </section>
+          )}
           {!result.matches.length && <Empty title="Nothing on your wantlist in these shops right now">Try more pages per shop, more shops, or looser rules.</Empty>}
           <ol className="matches">
             {result.matches.map(({ listing: l, score, reasons }, i) => {
@@ -140,6 +176,7 @@ export function Match() {
                     <div className="match-title">
                       <a href={l.uri} target="_blank" rel="noreferrer">{l.release.description}</a>
                       <div className="chip-row" style={{ gap: 6 }}>
+                        {verdicts.get(l.id) && <span className={`verdict-chip ${verdicts.get(l.id)!.verdict}`}>{VERDICT[verdicts.get(l.id)!.verdict]}</span>}
                         <GradeChip label="Vinyl" grade={parseGrade(l.condition)} />
                         <GradeChip label="Sleeve" grade={parseGrade(l.sleeve_condition)} />
                       </div>
@@ -150,6 +187,7 @@ export function Match() {
                     <span>
                       <b>{l.seller.username}</b>, {l.seller.stats?.rating}% from {Number(l.seller.stats?.total ?? 0).toLocaleString()} ratings<br />
                       Ships from {l.ships_from}{l.allow_offers ? ', accepts offers' : ''}{reasons.length ? <><br />{reasons.join(', ')}</> : null}
+                      {verdicts.get(l.id) && <><br /><span className="ai-note"><Sparkle />{verdicts.get(l.id)!.note}</span></>}
                     </span>
                     <span className="match-price">
                       <b>{money(p.value, p.currency)}</b>

@@ -4,6 +4,7 @@ import { api } from '../api';
 import { Cover } from '../components/Cover';
 import { ICONS } from '../components/Layout';
 import { RecordHero } from '../components/RecordHero';
+import { Tonight } from '../components/Tonight';
 import { ErrorBox, Loading, artistLine } from '../components/ui';
 import { useRoom } from '../room';
 
@@ -35,7 +36,10 @@ export function Home() {
           <h1>{greeting()}, {first}</h1>
           <p className="sub">{(profile.num_collection ?? 0).toLocaleString()} albums. Put one on.</p>
         </div>
-        <Link to="/check" className="btn icon" aria-label="Check an album"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg></Link>
+        <div className="page-actions">
+          <Link to="/check" className="btn icon" aria-label="Check an album"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg></Link>
+          <Link to="/settings" className="btn icon" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.settings} /></svg></Link>
+        </div>
       </div>
 
       {coll.isLoading && <Loading label="Pulling your latest albums…" />}
@@ -57,6 +61,8 @@ export function Home() {
           </div>
         </section>
       )}
+
+      <Tonight />
 
       <div className="home-split">
         <section aria-labelledby="h-recent">
