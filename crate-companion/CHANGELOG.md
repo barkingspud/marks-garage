@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Full-screen artwork.** Tap the cover on an album page to see every image Discogs has for that
+  release (front, back, labels, inserts). Swipe between them, pinch or double-tap to zoom, drag
+  to look around. Back closes it. A small count on the cover shows how many there are.
+- **Text follows your phone's Font size setting** (Android Settings, Display), up to 150%.
+
 - Album page actions are tidier: one main action (See the listings, or Add to collection), then a
   row of icon buttons: Collection, a heart for the wantlist (tap to add or remove), Shops and
   Discogs. Removing from the wantlist asks first and keeps you on the album.

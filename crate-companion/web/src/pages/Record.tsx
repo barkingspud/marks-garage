@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { BasicInformation, ReleaseDetails, Track } from '../../../shared/discogs-types';
 import { api } from '../api';
 import { RecordHero } from '../components/RecordHero';
+import { ImageViewer } from '../components/ImageViewer';
 import { ICONS } from '../components/Layout';
 import { gradeLabels, kindOf, type MediaKind } from '../../../shared/formats';
 import { RateRecord } from '../components/Stars';
@@ -24,6 +25,7 @@ import { load, save } from '../storage';
 export function Record() {
   const id = Number(useParams().releaseId);
   const qc = useQueryClient();
+  const [viewing, setViewing] = useState(false);
   const coll = useQuery({ queryKey: ['collection', 0], queryFn: () => api.collection(0) });
   const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
   const fields = useQuery({ queryKey: ['fields'], queryFn: api.fields });
@@ -67,6 +69,8 @@ export function Record() {
   }
   const g = myGrades(owned, fields.data?.fields);
   const kind = kindOf(b);
+  // Every image Discogs has for the release (front, back, labels…), or at least the cover.
+  const images = d?.images?.length ? d.images.map((i) => i.uri).filter(Boolean) : b?.cover_image ? [b.cover_image] : [];
   const names = gradeLabels(kind);
   const label = (d?.labels ?? b.labels)[0];
   const format = d ? formatLine({ formats: d.formats }) + formatText(d) : formatLine(b);
@@ -76,7 +80,9 @@ export function Record() {
     <div className="page">
       <BackButton />
       <div className="detail">
-        <RecordHero kind={kind} src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={label?.name} />
+        <RecordHero kind={kind} src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={label?.name}
+          onOpen={images.length ? () => setViewing(true) : undefined} imageCount={images.length} />
+        {viewing && <ImageViewer images={images} title={b.title} onClose={() => setViewing(false)} />}
         <div className="detail-info">
           <div>
             <h1>{b.title}</h1>
