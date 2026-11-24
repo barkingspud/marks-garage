@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Choose the AI model** in Settings: Haiku 5.5 (the new default, under 1¢ a use), Sonnet 5.5
+  or Opus 5.5 (the previous model, about 5 to 20¢ a use).
+- **AI costs** in Settings: what the AI has cost this month and all time, and the average cost
+  per use by feature and model, worked out from the tokens Anthropic reports.
+- Album notes say which model wrote them, with "Write again" after you switch models.
+
 - Home features an **Album of the day** instead of the last album added: a different album each
   day, favoring 5- and 4-star albums, with a line on why ("Added to your collection on this day
   in 2019", "Turns 50 this year", "One of your 5-star albums"). A shuffle button shows another.

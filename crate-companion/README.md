@@ -75,7 +75,10 @@ DISCOGS_ENV_FILE="/path/to/.env" npm run dev
 ## AI features
 
 Five features use Claude (Anthropic) with your own Anthropic API key, added in **Settings**.
-Each use bills your Anthropic account, roughly 5 to 20 cents.
+Each use bills your Anthropic account. Settings has a **model picker**: Haiku 5.5 (the default,
+under 1 cent a use), Sonnet 5.5 (about 3 to 10 cents) or Opus 5.5 (about 5 to 20 cents). An
+**AI costs** panel shows what the AI has cost this month and per use, by feature and model, so
+models can be compared on real use.
 
 | Feature | Where | What it does |
 |---|---|---|
@@ -88,7 +91,8 @@ Each use bills your Anthropic account, roughly 5 to 20 cents.
 The key is checked with Anthropic, then kept on the device (in the installed apps) or in
 `.cache/` (web version). The app sends Anthropic only what a feature needs, and only when you tap
 it. Code: `core/ai/` (`llm.ts` calls the API through the official SDK with structured outputs;
-`features.ts` has the prompts and the Discogs checks).
+`features.ts` has the prompts and the Discogs checks). The models and their prices are in
+`shared/ai-models.ts`; the cost log is kept on the device, up to the last 1,000 uses.
 
 ## Android app
 

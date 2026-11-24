@@ -3,7 +3,9 @@ import { CrateCore } from '../crate';
 import { MockDiscogs } from '../discogs/mock';
 import { fetchCollection, fetchWants, splitTitle } from '../services';
 import { identify, norm, playTonight, recommendFor, reviewListings } from './features';
-import type { Ask } from './llm';
+import { costOf } from '../../shared/ai-models';
+import { MemoryStore } from '../auth/store';
+import { AiError, type AiBackend, type Ask } from './llm';
 
 /** A fake AI that returns the given answers in order. */
 function scripted(...answers: unknown[]): Ask & { calls: number } {
@@ -93,12 +95,86 @@ describe('AI features', () => {
 describe('AI key in the core', () => {
   it('needs a key, checks it before saving, and can remove it', async () => {
     let checked = 0;
-    const core = CrateCore.fromApi(new MockDiscogs(), undefined, undefined, () => ({ ask: scripted(), check: async () => { checked++; } }));
+    const core = CrateCore.fromApi(new MockDiscogs(), undefined, undefined, () => ({ ask: async () => { throw new Error('unused'); }, check: async () => { checked++; } }));
     expect((await core.aiStatus()).configured).toBe(false);
     await expect(core.aiTonight({})).rejects.toThrow(/Anthropic API key/);
     await expect(core.aiSetKey('not-a-key')).rejects.toThrow(/sk-ant-/);
     expect((await core.aiSetKey(' sk-ant-test ')).configured).toBe(true);
     expect(checked).toBe(1);
     expect((await core.aiRemoveKey()).configured).toBe(false);
+  });
+});
+
+describe('AI model and costs', () => {
+  const tokens = (input: number, output: number) => ({ input, output, cacheRead: 0, cacheWrite: 0 });
+
+  it('prices requests from the list prices', () => {
+    // Opus 5.5: $4 in, $20 out per million tokens.
+    expect(costOf('claude-opus-5-5', tokens(1_000_000, 0))).toBeCloseTo(4);
+    expect(costOf('claude-opus-5-5', tokens(10_000, 2_000))).toBeCloseTo(0.08);
+    // Haiku 5.5: $0.10 / $0.50, and $0.50 / $2.50 for prompts over 100K tokens.
+    expect(costOf('claude-haiku-5-5', tokens(10_000, 2_000))).toBeCloseTo(0.002);
+    expect(costOf('claude-haiku-5-5', tokens(200_000, 0))).toBeCloseTo(0.1);
+    expect(costOf('some-other-model', tokens(1000, 1000))).toBe(0);
+  });
+
+  it('uses Haiku by default, lets you choose, and logs what each use cost', async () => {
+    const asked: string[] = [];
+    let answer: () => unknown = () => ({ note: 'Enjoy.', picks: [] });
+    const backend: AiBackend = {
+      check: async () => undefined,
+      ask: async (_o, model) => {
+        asked.push(model);
+        return { output: answer() as never, usage: { model, tokens: tokens(10_000, 2_000) } };
+      },
+    };
+    const core = CrateCore.fromApi(new MockDiscogs(), undefined, new MemoryStore(), () => backend);
+    await core.aiSetKey('sk-ant-test');
+    expect((await core.aiStatus()).model).toBe('claude-haiku-5-5');
+
+    await core.aiTonight({});
+    expect((await core.aiSetModel('claude-opus-5-5')).model).toBe('claude-opus-5-5');
+    await core.aiTonight({});
+    await expect(core.aiSetModel('gpt-5')).rejects.toThrow(/Unknown model/);
+    expect(asked).toEqual(['claude-haiku-5-5', 'claude-opus-5-5']);
+
+    // A declined answer is still billed, so it's still logged.
+    answer = () => { throw new AiError(422, 'declined', { model: 'claude-opus-5-5', tokens: tokens(10_000, 2_000) }); };
+    await expect(core.aiTonight({})).rejects.toThrow(/declined/);
+
+    const u = await core.aiUsage();
+    expect(u.total.uses).toBe(3);
+    expect(u.thisMonth.uses).toBe(3);
+    expect(u.total.cost).toBeCloseTo(0.002 + 0.08 + 0.08);
+    expect(u.groups.map((g) => [g.feature, g.model, g.uses])).toEqual([
+      ['tonight', 'claude-haiku-5-5', 1],
+      ['tonight', 'claude-opus-5-5', 2],
+    ]);
+    expect(u.recent[0]?.model).toBe('claude-opus-5-5');
+
+    expect((await core.aiClearUsage()).total.uses).toBe(0);
+  });
+
+  it('adds up every request in one use', async () => {
+    let n = 0;
+    const backend: AiBackend = {
+      check: async () => undefined,
+      ask: async (_o, model) => {
+        n++;
+        // The first answer reads the photo; the second picks among Discogs matches.
+        const output = n === 1
+          ? { seen: { artist: 'Nobody', title: 'Nothing', label: null, catalogNumbers: [], barcode: null, runout: [] }, confidence: 'low', notes: '' }
+          : { releaseId: null, confidence: 'low', reason: 'No match.' };
+        return { output: output as never, usage: { model, tokens: tokens(1_000, 1_000) } };
+      },
+    };
+    const core = CrateCore.fromApi(new MockDiscogs(), undefined, new MemoryStore(), () => backend);
+    await core.aiSetKey('sk-ant-test');
+    const { id } = await core.aiIdentify({ photos: [{ mediaType: 'image/jpeg', data: 'AAAA' }] });
+    for (let i = 0; i < 50 && core.job(id).status === 'running'; i++) await new Promise((r) => setTimeout(r, 10));
+    const u = await core.aiUsage();
+    expect(u.total.uses).toBe(1);
+    expect(u.recent[0]?.requests).toBe(n);
+    expect(u.recent[0]?.cost).toBeCloseTo(n * costOf('claude-haiku-5-5', tokens(1_000, 1_000)));
   });
 });

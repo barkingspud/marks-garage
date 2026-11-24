@@ -1,9 +1,10 @@
 import type { MatchResult, RecommendResult } from '../shared/api-types';
 import type { CollectionField, CollectionFolder, CollectionItem, Listing, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../shared/discogs-types';
 import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
-import type { AiRecommendResult, AiStatus, AlbumNotes, IdentifyResult, ListingReview, TonightResult } from '../shared/ai-types';
+import type { AiFeature, AiRecommendResult, AiStatus, AiUsageEntry, AiUsageGroup, AiUsageReport, AlbumNotes, IdentifyResult, ListingReview, TonightResult } from '../shared/ai-types';
+import { costOf, DEFAULT_AI_MODEL, isAiModel, type AiModelId } from '../shared/ai-models';
 import { albumNotes, identify, playTonight, recommendFor, reviewListings, type Photo } from './ai/features';
-import { AI_MODEL, AiError, anthropicBackend, type AiBackend } from './ai/llm';
+import { AiError, anthropicBackend, type AiBackend, type Ask, type Usage } from './ai/llm';
 import { DiscogsConnection, type ConnectionStatus } from './auth/connection';
 import type { Consumer } from './auth/oauth';
 import { MemoryStore, type KeyValueStore } from './auth/store';
@@ -41,6 +42,10 @@ export interface CoreOptions {
 }
 
 const AI_KEY = 'anthropic-api-key';
+const AI_MODEL_KEY = 'ai-model';
+const AI_USAGE_KEY = 'ai-usage';
+/** How many uses the cost log keeps. */
+const USAGE_KEEP = 1000;
 
 /**
  * Everything Crate Companion does, in one place: the server exposes it over HTTP for the
@@ -51,6 +56,8 @@ export class CrateCore {
   private images = new TtlCache<{ body: ArrayBuffer; type: string }>(400);
   private notes = new TtlCache<AlbumNotes>(200);
   private aiCache?: { key: string; backend: AiBackend };
+  /** Cost-log writes, one at a time so they don't overwrite each other. */
+  private usageWrites: Promise<void> = Promise.resolve();
 
   private constructor(
     readonly api: DiscogsApi,
@@ -191,14 +198,93 @@ export class CrateCore {
   // ------------------------------------------------ AI (the user's own Anthropic API key)
 
   async aiStatus(): Promise<AiStatus> {
-    return { configured: !!(await this.store.get(AI_KEY)), model: AI_MODEL };
+    return { configured: !!(await this.store.get(AI_KEY)), model: await this.aiModel() };
+  }
+
+  private async aiModel(): Promise<AiModelId> {
+    const m = await this.store.get(AI_MODEL_KEY);
+    return isAiModel(m) ? m : DEFAULT_AI_MODEL;
+  }
+
+  /** Choose the model the AI features use. */
+  async aiSetModel(model: string): Promise<AiStatus> {
+    if (!isAiModel(model)) throw new CrateError(400, 'Unknown model.');
+    await this.store.set(AI_MODEL_KEY, model);
+    this.notes.clear();
+    return this.aiStatus();
+  }
+
+  /** What the AI has cost on this device, from the cost log. */
+  async aiUsage(now = new Date()): Promise<AiUsageReport> {
+    const log = await this.usageLog();
+    const month = now.toISOString().slice(0, 7);
+    const sum = (es: AiUsageEntry[]) => ({ uses: es.length, cost: es.reduce((t, e) => t + e.cost, 0) });
+    const groups = new Map<string, AiUsageGroup>();
+    for (const e of log) {
+      const k = `${e.feature}|${e.model}`;
+      const g = groups.get(k) ?? { feature: e.feature, model: e.model, uses: 0, cost: 0 };
+      g.uses++; g.cost += e.cost;
+      groups.set(k, g);
+    }
+    return {
+      thisMonth: sum(log.filter((e) => e.at.startsWith(month))),
+      total: sum(log),
+      groups: [...groups.values()].sort((a, b) => a.feature.localeCompare(b.feature) || a.model.localeCompare(b.model)),
+      recent: log.slice(-20).reverse(),
+    };
+  }
+
+  async aiClearUsage(): Promise<AiUsageReport> {
+    await this.usageWrites;
+    await this.store.remove(AI_USAGE_KEY);
+    return this.aiUsage();
+  }
+
+  private async usageLog(): Promise<AiUsageEntry[]> {
+    try {
+      const v = JSON.parse((await this.store.get(AI_USAGE_KEY)) ?? '[]');
+      return Array.isArray(v) ? v : [];
+    } catch { return []; }
+  }
+
+  /** Adds a request's usage to this use's entry in the cost log. */
+  private recordUsage(entry: AiUsageEntry, u: Usage): Promise<void> {
+    entry.requests++;
+    entry.model = u.model;
+    entry.inputTokens += u.tokens.input + u.tokens.cacheRead + u.tokens.cacheWrite;
+    entry.outputTokens += u.tokens.output;
+    entry.cost += costOf(u.model, u.tokens);
+    const write = this.usageWrites.then(async () => {
+      const log = (await this.usageLog()).filter((e) => !(e.at === entry.at && e.feature === entry.feature));
+      log.push(entry);
+      await this.store.set(AI_USAGE_KEY, JSON.stringify(log.slice(-USAGE_KEEP)));
+    }).catch(() => undefined);
+    this.usageWrites = write;
+    return write;
+  }
+
+  /** The AI for one use of a feature: asks with the chosen model and logs what it cost. */
+  private async asker(feature: AiFeature): Promise<Ask> {
+    const backend = await this.ai();
+    const model = await this.aiModel();
+    const entry: AiUsageEntry = { at: new Date().toISOString(), feature, model, requests: 0, inputTokens: 0, outputTokens: 0, cost: 0 };
+    return async (o) => {
+      try {
+        const { output, usage } = await backend.ask(o, model);
+        if (usage) await this.recordUsage(entry, usage);
+        return output;
+      } catch (e) {
+        if (e instanceof AiError && e.usage) await this.recordUsage(entry, e.usage);
+        throw e;
+      }
+    };
   }
 
   /** Save an Anthropic API key after checking it works. */
   async aiSetKey(key: string): Promise<AiStatus> {
     const k = key.trim();
     if (!/^sk-ant-/.test(k)) throw new CrateError(400, 'That doesn\'t look like an Anthropic API key. It starts with sk-ant-.');
-    await this.makeAi(k).check();
+    await this.makeAi(k).check(await this.aiModel());
     await this.store.set(AI_KEY, k);
     this.aiCache = undefined;
     return this.aiStatus();
@@ -221,7 +307,7 @@ export class CrateCore {
   async aiIdentify(body: { photos?: Photo[] }): Promise<{ id: string }> {
     const photos = (body.photos ?? []).filter((p) => p?.data && /^image\/(jpeg|png|webp)$/.test(p.mediaType));
     if (!photos.length) throw new CrateError(400, 'Add a photo first.');
-    const { ask } = await this.ai();
+    const ask = await this.asker('identify');
     await this.me();
     const job = startJob<IdentifyResult>('ai-identify', (progress) => identify(ask, this.api, photos, progress));
     return { id: job.id };
@@ -231,7 +317,7 @@ export class CrateCore {
   async aiRecommend(body: { request?: string }): Promise<{ id: string }> {
     const request = body.request?.trim().slice(0, 500);
     if (!request) throw new CrateError(400, 'Say what you\'re in the mood for.');
-    const { ask } = await this.ai();
+    const ask = await this.asker('recommend');
     const u = await this.me();
     const job = startJob<AiRecommendResult>('ai-recommend', async (progress) => {
       progress(0, 1, 'Reading your collection…');
@@ -245,7 +331,7 @@ export class CrateCore {
   async aiReviewListings(body: { listings?: Listing[] }): Promise<ListingReview> {
     const listings = (body.listings ?? []).filter((l) => l && typeof l.id === 'number');
     if (!listings.length) throw new CrateError(400, 'No listings to review.');
-    return reviewListings((await this.ai()).ask, listings);
+    return reviewListings(await this.asker('review'), listings);
   }
 
   /** Short notes on an album and this pressing. Kept for a day. */
@@ -253,7 +339,7 @@ export class CrateCore {
     if (!releaseId) throw new CrateError(400, 'releaseId required');
     const hit = this.notes.get(String(releaseId));
     if (hit) return hit;
-    const { ask } = await this.ai();
+    const ask = await this.asker('notes');
     const n = await albumNotes(ask, await this.api.release(releaseId));
     this.notes.set(String(releaseId), n, 24 * 60 * 60_000);
     return n;
@@ -261,7 +347,7 @@ export class CrateCore {
 
   /** A few albums from your own shelves for right now. */
   async aiTonight(body: { mood?: string }): Promise<TonightResult> {
-    const { ask } = await this.ai();
+    const ask = await this.asker('tonight');
     const u = await this.me();
     return playTonight(ask, body.mood?.trim().slice(0, 300) ?? '', await fetchCollection(this.api, u));
   }
