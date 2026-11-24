@@ -46,6 +46,11 @@ export function Record() {
     mutationFn: () => api.addWant({ releaseId: id }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['wants'] }),
   });
+  // Bought it: into the Discogs collection, and off the wantlist if it was there.
+  const addCopy = useMutation({
+    mutationFn: (fromWantlist: boolean) => api.addToCollection(id, fromWantlist),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['collection'] }); void qc.invalidateQueries({ queryKey: ['wants'] }); },
+  });
   useRoom(b ? b.cover_image || b.thumb : null);
 
   if (coll.isLoading || wants.isLoading || (rel.isLoading && !owned && !wanted)) return <Loading />;
@@ -135,6 +140,11 @@ export function Record() {
             {!owned && forSale > 0 && (
               <a className="btn primary" href={`https://www.discogs.com/sell/release/${id}`} target="_blank" rel="noreferrer">See the {forSale} listing{forSale === 1 ? '' : 's'}</a>
             )}
+            {!owned && (
+              <button className={`btn${forSale > 0 ? '' : ' primary'}`} disabled={addCopy.isPending || addCopy.isSuccess} onClick={() => addCopy.mutate(!!wanted)}>
+                {addCopy.isSuccess ? 'Added to your collection' : addCopy.isPending ? 'Adding…' : 'Add to collection'}
+              </button>
+            )}
             {wanted && !owned && <Link className="btn" to="/match">Check my favorite shops</Link>}
             {!owned && !wanted && (
               <button className="btn" disabled={addWant.isPending || addWant.isSuccess} onClick={() => addWant.mutate()}>
@@ -144,7 +154,8 @@ export function Record() {
             <a className="btn" href={discogsUrl('release', id)} target="_blank" rel="noreferrer">Open on Discogs</a>
             {wanted && !owned && <button className="btn danger" disabled={remove.isPending} onClick={() => remove.mutate()}>Remove from wantlist</button>}
           </div>
-          <ErrorBox error={remove.error ?? addWant.error} />
+          {addCopy.isSuccess && <p className="sub" aria-live="polite">Added to your Discogs collection{addCopy.variables ? ' and removed from your wantlist' : ''}.</p>}
+          <ErrorBox error={remove.error ?? addWant.error ?? addCopy.error} />
         </div>
       </div>
 
