@@ -11,6 +11,8 @@
   Ratings save to Discogs and show in the collection list view.
 - The wantlist has a list view, like the collection.
 - Android test builds share one signing key, so a new build installs over the old one.
+- "Identifying this pressing" starts collapsed when it has more than three entries, showing one
+  barcode and the first runout etchings, with "Show all" for the rest.
 - Sellers moved off the bottom bar: it's now "Favorite shops", opened from the Wantlist.
 - Recommendations and seller scans keep running when you switch pages, and the last result
   is kept until you run it again (also after closing the app).
