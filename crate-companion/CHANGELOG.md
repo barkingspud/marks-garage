@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed: Disconnect seemed to do nothing (the screen still said "Signed in as…" until the app was
+  restarted). The app now starts over at the sign-in screen.
 - Fixed: identifying a second album from photos (or a second search on Check an album) could
   leave a black screen until the app was restarted. If a page ever hits an error now, it shows a
   message with Try again instead.
