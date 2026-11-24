@@ -15,6 +15,7 @@ import { Match } from './pages/Match';
 import { Record } from './pages/Record';
 import { Check } from './pages/Check';
 import { Setup } from './pages/Setup';
+import { Settings } from './pages/Settings';
 import { Wantlist } from './pages/Wantlist';
 import '@fontsource-variable/bricolage-grotesque/opsz.css';
 import './styles.css';
@@ -61,6 +62,7 @@ function App() {
         <Route path="discover" element={<Discover />} />
         <Route path="record/:releaseId" element={<Record />} />
         <Route path="check" element={<Check />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   );

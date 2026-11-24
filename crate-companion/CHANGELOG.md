@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+**AI features (0.3.0)**, using Claude with your own Anthropic API key (Settings):
+
+- Identify a pressing from photos of the cover, label, barcode or runout (Check an album).
+- Ask for recommendations in your own words (Discover). Picks are checked against Discogs.
+- AI review of seller listings, reading the sellers' notes (Favorite shops).
+- Notes on an album and its pressing (album page).
+- "What should I play tonight?" picks from your own albums (Home).
+- New Settings page: Discogs account (with Disconnect on phones too) and the AI key.
+
 - The app says "albums" instead of "records" (Check an album, Open album, 374 albums). The
   disc's condition grade is labeled "Vinyl" (next to "Sleeve").
 - Long release notes show the first five lines, with "Show more" for the rest.

@@ -1,6 +1,6 @@
 {
   "name": "crate-companion",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Track your record collection and wantlist, match wants to sellers, and get recommendations — powered by the Discogs API.",
   "type": "module",
@@ -19,6 +19,7 @@
     "android:open": "cap open android"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.6.0",
     "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor-mlkit/barcode-scanning": "^8.2.2",
     "@capacitor/android": "^8.6.2",
@@ -33,7 +34,8 @@
     "hono": "^4.13.21",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.6"
+    "react-router-dom": "^6.30.6",
+    "zod": "4.1.12"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.6.2",

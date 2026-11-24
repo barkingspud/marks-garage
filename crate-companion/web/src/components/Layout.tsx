@@ -11,6 +11,7 @@ const ICONS = {
   sellers: 'M4 8h13l-3-3M20 16H7l3 3',
   discover: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6',
   barcode: 'M4 6v12M7 6v12M11 6v12M14 6v12M18 6v12M20 6v12',
+  settings: 'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4',
 };
 export const Icon = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden><path d={d} /></svg>;
 export { ICONS };
@@ -42,6 +43,7 @@ export function Layout({ status }: { status: Status }) {
               </nav>
               <div className="side-foot">
                 <NavLink to="/check" className="btn"><svg viewBox="0 0 24 24" aria-hidden><path d={ICONS.barcode} /></svg>Check an album</NavLink>
+                <NavLink to="/settings" className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}><Icon d={ICONS.settings} />Settings</NavLink>
                 <div className="who">
                   {status.mock ? <span>Demo data</span> : status.username && <span>Signed in as <b>{status.username}</b></span>}
                   {status.mock && mode === 'local' && <button className="btn small" onClick={() => { forgetJobResults(); api.setDemo(false); }}>Leave demo</button>}

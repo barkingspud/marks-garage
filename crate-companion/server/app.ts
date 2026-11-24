@@ -38,6 +38,15 @@ export function createApp(core: CrateCore) {
   });
   app.post('/collection/rating', async (c) => c.json(await core.rate(await c.req.json())));
   app.get('/releases/:releaseId', async (c) => c.json(await core.release(num(c, 'releaseId'))));
+  // AI (the user's own Anthropic API key, saved on the server's disk in server mode)
+  app.get('/ai/status', async (c) => c.json(await core.aiStatus()));
+  app.post('/ai/key', async (c) => c.json(await core.aiSetKey((await c.req.json<{ key?: string }>()).key ?? '')));
+  app.delete('/ai/key', async (c) => c.json(await core.aiRemoveKey()));
+  app.post('/ai/identify', async (c) => c.json(await core.aiIdentify(await c.req.json())));
+  app.post('/ai/recommend', async (c) => c.json(await core.aiRecommend(await c.req.json())));
+  app.post('/ai/review', async (c) => c.json(await core.aiReviewListings(await c.req.json())));
+  app.get('/ai/notes/:releaseId', async (c) => c.json(await core.aiNotes(num(c, 'releaseId'))));
+  app.post('/ai/tonight', async (c) => c.json(await core.aiTonight(await c.req.json())));
   app.get('/wants', async (c) => c.json(await core.wants()));
   app.post('/wants', async (c) => c.json(await core.addWant(await c.req.json())));
   app.delete('/wants/:releaseId', async (c) => c.json(await core.removeWant(num(c, 'releaseId'))));

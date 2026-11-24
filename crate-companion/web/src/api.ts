@@ -1,7 +1,8 @@
 import type { ConnectionStatus } from '../../core/auth/connection';
+import type { AiStatus, AlbumNotes, ListingReview, TonightResult } from '../../shared/ai-types';
 import type { KeyValueStore } from '../../core/auth/store';
 import type { CrateCore, Job as CoreJob, Status as CoreStatus } from '../../core/crate';
-import type { CollectionField, CollectionFolder, CollectionItem, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../../shared/discogs-types';
+import type { CollectionField, CollectionFolder, CollectionItem, Listing, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../../shared/discogs-types';
 
 /**
  * Two ways to run:
@@ -17,6 +18,7 @@ export class ApiError extends Error {
 }
 
 export type AuthStatus = ConnectionStatus;
+export type JobKind = 'match' | 'recommend' | 'ai-identify' | 'ai-recommend';
 export type Status = CoreStatus;
 export type Job<T> = Pick<CoreJob<T>, 'id' | 'status' | 'progress' | 'result' | 'error'>;
 type Value = { minimum: string; median: string; maximum: string } | null;
@@ -77,7 +79,7 @@ function core(): Promise<CrateCore> {
     try { demo = localStorage.getItem('crate:demo') === '1'; } catch { /* ignore */ }
     return CrateCore.create({
       mock: demo,
-      userAgent: 'CrateCompanion/0.2 +https://github.com/barkingspud/marks-garage',
+      userAgent: 'CrateCompanion/0.3 +https://github.com/barkingspud/marks-garage',
       fetch: native?.fetch,
       store: native?.store ?? new BrowserStore(),
       consumer: key && secret ? { key, secret } : undefined,
@@ -112,9 +114,20 @@ export const api = {
     L ? local((c) => c.addWant(ids)) : call<{ ok: true; releaseId: number }>('/wants', { method: 'POST', body: JSON.stringify(ids) }),
   removeWant: (releaseId: number) => (L ? local((c) => c.removeWant(releaseId)) : call<{ ok: true }>(`/wants/${releaseId}`, { method: 'DELETE' })),
   stats: (releaseId: number) => (L ? local((c) => c.stats(releaseId)) : call<MarketplaceStats>(`/stats/${releaseId}`)),
-  startJob: (kind: 'match' | 'recommend', body: unknown = {}) =>
-    L ? local((c) => (kind === 'match' ? c.startMatch(body as Parameters<CrateCore['startMatch']>[0]) : c.startRecommend()))
-      : call<{ id: string }>(`/jobs/${kind}`, { method: 'POST', body: JSON.stringify(body) }),
+  startJob: (kind: JobKind, body: unknown = {}) => {
+    if (L) {
+      return local((c) => {
+        switch (kind) {
+          case 'match': return c.startMatch(body as Parameters<CrateCore['startMatch']>[0]);
+          case 'recommend': return c.startRecommend();
+          case 'ai-identify': return c.aiIdentify(body as Parameters<CrateCore['aiIdentify']>[0]);
+          case 'ai-recommend': return c.aiRecommend(body as Parameters<CrateCore['aiRecommend']>[0]);
+        }
+      });
+    }
+    const path = kind === 'ai-identify' ? '/ai/identify' : kind === 'ai-recommend' ? '/ai/recommend' : `/jobs/${kind}`;
+    return call<{ id: string }>(path, { method: 'POST', body: JSON.stringify(body) });
+  },
   job: <T,>(id: string) => (L ? local((c) => ({ ...c.job<T>(id) })) : call<Job<T>>(`/jobs/${id}`)),
   fields: () => (L ? local((c) => c.fields()) : call<{ fields: CollectionField[] }>('/collection/fields')),
   addToCollection: (releaseId: number, removeFromWants: boolean) =>
@@ -126,6 +139,17 @@ export const api = {
   searchReleases: (p: { q?: string; barcode?: string; catno?: string }) =>
     L ? local((c) => c.searchReleases(p))
       : call<{ total: number; results: SearchResult[] }>(`/search/releases?${new URLSearchParams(Object.entries(p).filter(([, v]) => v) as [string, string][])}`),
+
+  // ---- AI (your own Anthropic API key)
+
+  ai: {
+    status: () => (L ? local((c) => c.aiStatus()) : call<AiStatus>('/ai/status')),
+    setKey: (key: string) => (L ? local((c) => c.aiSetKey(key)) : call<AiStatus>('/ai/key', { method: 'POST', body: JSON.stringify({ key }) })),
+    removeKey: () => (L ? local((c) => c.aiRemoveKey()) : call<AiStatus>('/ai/key', { method: 'DELETE' })),
+    review: (listings: Listing[]) => (L ? local((c) => c.aiReviewListings({ listings })) : call<ListingReview>('/ai/review', { method: 'POST', body: JSON.stringify({ listings }) })),
+    notes: (releaseId: number) => (L ? local((c) => c.aiNotes(releaseId)) : call<AlbumNotes>(`/ai/notes/${releaseId}`)),
+    tonight: (mood: string) => (L ? local((c) => c.aiTonight({ mood })) : call<TonightResult>('/ai/tonight', { method: 'POST', body: JSON.stringify({ mood }) })),
+  },
 
   // ---- connecting
 

@@ -72,6 +72,24 @@ bash:
 DISCOGS_ENV_FILE="/path/to/.env" npm run dev
 ```
 
+## AI features
+
+Five features use Claude (Anthropic) with your own Anthropic API key, added in **Settings**.
+Each use bills your Anthropic account, roughly 5 to 20 cents.
+
+| Feature | Where | What it does |
+|---|---|---|
+| Identify from photos | Check an album, camera button | Reads the cover, label, barcode or runout in up to 4 photos, searches Discogs, and picks the matching pressing. |
+| Ask for something specific | Discover | Recommendations from a request in your own words. Every pick is checked against Discogs; ones Discogs doesn't list are left out. |
+| AI review | Favorite shops results | Reads every listing, including the seller's notes, and marks each one Great buy, Good, Careful or Skip. |
+| About this album | Album page | Notes on why the album matters, what to listen for, and what's notable about this pressing. |
+| What should I play tonight? | Home | Picks from your own albums for a mood. |
+
+The key is checked with Anthropic, then kept on the device (in the installed apps) or in
+`.cache/` (web version). The app sends Anthropic only what a feature needs, and only when you tap
+it. Code: `core/ai/` (`llm.ts` calls the API through the official SDK with structured outputs;
+`features.ts` has the prompts and the Discogs checks).
+
 ## Android app
 
 The Android app runs everything on the phone: no PC or server needed. GitHub builds it

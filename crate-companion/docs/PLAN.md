@@ -86,6 +86,9 @@ Collection, wantlist, seller match, recommendations, demo mode, tests.
       on-device storage (excluded from cloud backup), "Connect with Discogs" returning to
       `cratecompanion://auth`, Google's barcode scanner (ML Kit), keep the screen awake during
       scans, icon and launch screen, debug and signed release builds on GitHub Actions.
+- [x] AI features with the user's own Anthropic API key (Claude): identify a pressing from
+      photos, recommendations from a plain-English request (checked against Discogs), seller
+      listing review, album notes, picks for tonight. Settings page for the key.
 - [ ] Step 3: Windows desktop app (Electron): same core with Node's fetch in the main process,
       protocol-handler sign-in, installer and auto-updates via GitHub Releases.
 - [ ] Step 4: store readiness: Play listing, privacy policy page, data safety answers, icons.

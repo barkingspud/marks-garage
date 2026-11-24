@@ -1,9 +1,12 @@
 import type { MatchResult, RecommendResult } from '../shared/api-types';
-import type { CollectionField, CollectionFolder, CollectionItem, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../shared/discogs-types';
+import type { CollectionField, CollectionFolder, CollectionItem, Listing, MarketplaceStats, ReleaseDetails, SearchResult, UserProfile, WantItem } from '../shared/discogs-types';
 import { DEFAULT_CRITERIA, type MatchCriteria } from '../shared/matching';
+import type { AiRecommendResult, AiStatus, AlbumNotes, IdentifyResult, ListingReview, TonightResult } from '../shared/ai-types';
+import { albumNotes, identify, playTonight, recommendFor, reviewListings, type Photo } from './ai/features';
+import { AI_MODEL, AiError, anthropicBackend, type AiBackend } from './ai/llm';
 import { DiscogsConnection, type ConnectionStatus } from './auth/connection';
 import type { Consumer } from './auth/oauth';
-import type { KeyValueStore } from './auth/store';
+import { MemoryStore, type KeyValueStore } from './auth/store';
 import type { DiscogsApi } from './discogs/api';
 import { DiscogsClient, DiscogsError } from './discogs/client';
 import { MockDiscogs } from './discogs/mock';
@@ -33,7 +36,11 @@ export interface CoreOptions {
   consumer?: Consumer;
   personalToken?: string;
   personalUsername?: string;
+  /** Makes the AI from an API key; tests pass a fake. */
+  aiBackend?: (apiKey: string) => AiBackend;
 }
+
+const AI_KEY = 'anthropic-api-key';
 
 /**
  * Everything Crate Companion does, in one place: the server exposes it over HTTP for the
@@ -42,11 +49,18 @@ export interface CoreOptions {
 export class CrateCore {
   private mockUser?: string;
   private images = new TtlCache<{ body: ArrayBuffer; type: string }>(400);
+  private notes = new TtlCache<AlbumNotes>(200);
+  private aiCache?: { key: string; backend: AiBackend };
 
-  private constructor(readonly api: DiscogsApi, readonly connection?: DiscogsConnection) {}
+  private constructor(
+    readonly api: DiscogsApi,
+    readonly connection?: DiscogsConnection,
+    private store: KeyValueStore = new MemoryStore(),
+    private makeAi: (apiKey: string) => AiBackend = anthropicBackend,
+  ) {}
 
   static async create(o: CoreOptions): Promise<CrateCore> {
-    if (o.mock) return new CrateCore(new MockDiscogs());
+    if (o.mock) return new CrateCore(new MockDiscogs(), undefined, o.store, o.aiBackend);
     const client = new DiscogsClient({ userAgent: o.userAgent, fetch: o.fetch });
     const connection = await DiscogsConnection.create({
       consumer: o.consumer, personalToken: o.personalToken, personalUsername: o.personalUsername,
@@ -54,12 +68,12 @@ export class CrateCore {
       apply: (auth) => client.setAuth(auth),
       identify: (auth) => client.identify(auth),
     });
-    return new CrateCore(client, connection);
+    return new CrateCore(client, connection, o.store, o.aiBackend);
   }
 
   /** For tests and the server: wrap an existing Discogs client (e.g. the mock). */
-  static fromApi(api: DiscogsApi, connection?: DiscogsConnection) {
-    return new CrateCore(api, connection);
+  static fromApi(api: DiscogsApi, connection?: DiscogsConnection, store?: KeyValueStore, aiBackend?: (apiKey: string) => AiBackend) {
+    return new CrateCore(api, connection, store, aiBackend);
   }
 
   private async me(): Promise<string> {
@@ -174,6 +188,84 @@ export class CrateCore {
     return job as Job<T>;
   }
 
+  // ------------------------------------------------ AI (the user's own Anthropic API key)
+
+  async aiStatus(): Promise<AiStatus> {
+    return { configured: !!(await this.store.get(AI_KEY)), model: AI_MODEL };
+  }
+
+  /** Save an Anthropic API key after checking it works. */
+  async aiSetKey(key: string): Promise<AiStatus> {
+    const k = key.trim();
+    if (!/^sk-ant-/.test(k)) throw new CrateError(400, 'That doesn\'t look like an Anthropic API key. It starts with sk-ant-.');
+    await this.makeAi(k).check();
+    await this.store.set(AI_KEY, k);
+    this.aiCache = undefined;
+    return this.aiStatus();
+  }
+
+  async aiRemoveKey(): Promise<AiStatus> {
+    await this.store.remove(AI_KEY);
+    this.aiCache = undefined;
+    return this.aiStatus();
+  }
+
+  private async ai(): Promise<AiBackend> {
+    const key = await this.store.get(AI_KEY);
+    if (!key) throw new AiError(400, 'Add your Anthropic API key in Settings to use the AI features.');
+    if (this.aiCache?.key !== key) this.aiCache = { key, backend: this.makeAi(key) };
+    return this.aiCache.backend;
+  }
+
+  /** Identify a pressing from up to 4 photos (cover, label, barcode, runout). Runs as a job. */
+  async aiIdentify(body: { photos?: Photo[] }): Promise<{ id: string }> {
+    const photos = (body.photos ?? []).filter((p) => p?.data && /^image\/(jpeg|png|webp)$/.test(p.mediaType));
+    if (!photos.length) throw new CrateError(400, 'Add a photo first.');
+    const { ask } = await this.ai();
+    await this.me();
+    const job = startJob<IdentifyResult>('ai-identify', (progress) => identify(ask, this.api, photos, progress));
+    return { id: job.id };
+  }
+
+  /** Recommendations for a request in plain English, checked against Discogs. Runs as a job. */
+  async aiRecommend(body: { request?: string }): Promise<{ id: string }> {
+    const request = body.request?.trim().slice(0, 500);
+    if (!request) throw new CrateError(400, 'Say what you\'re in the mood for.');
+    const { ask } = await this.ai();
+    const u = await this.me();
+    const job = startJob<AiRecommendResult>('ai-recommend', async (progress) => {
+      progress(0, 1, 'Reading your collection…');
+      const [collection, wants] = await Promise.all([fetchCollection(this.api, u), fetchWants(this.api, u)]);
+      return recommendFor(ask, this.api, request, collection, wants, progress);
+    });
+    return { id: job.id };
+  }
+
+  /** The AI's take on seller listings: verdicts plus anything the sellers' notes warn about. */
+  async aiReviewListings(body: { listings?: Listing[] }): Promise<ListingReview> {
+    const listings = (body.listings ?? []).filter((l) => l && typeof l.id === 'number');
+    if (!listings.length) throw new CrateError(400, 'No listings to review.');
+    return reviewListings((await this.ai()).ask, listings);
+  }
+
+  /** Short notes on an album and this pressing. Kept for a day. */
+  async aiNotes(releaseId: number): Promise<AlbumNotes> {
+    if (!releaseId) throw new CrateError(400, 'releaseId required');
+    const hit = this.notes.get(String(releaseId));
+    if (hit) return hit;
+    const { ask } = await this.ai();
+    const n = await albumNotes(ask, await this.api.release(releaseId));
+    this.notes.set(String(releaseId), n, 24 * 60 * 60_000);
+    return n;
+  }
+
+  /** A few albums from your own shelves for right now. */
+  async aiTonight(body: { mood?: string }): Promise<TonightResult> {
+    const { ask } = await this.ai();
+    const u = await this.me();
+    return playTonight(ask, body.mood?.trim().slice(0, 300) ?? '', await fetchCollection(this.api, u));
+  }
+
   // ------------------------------------------------ Connect with Discogs
 
   private conn(): DiscogsConnection {
@@ -189,7 +281,7 @@ export class CrateCore {
 
 /** Turn anything thrown into a status code and message. */
 export function errorStatus(e: unknown): { status: number; message: string } {
-  if (e instanceof CrateError) return { status: e.status, message: e.message };
+  if (e instanceof CrateError || e instanceof AiError) return { status: e.status, message: e.message };
   if (e instanceof DiscogsError) return { status: e.status === 401 || e.status === 404 || e.status === 429 ? e.status : 502, message: e.message };
   return { status: 500, message: e instanceof Error ? e.message : String(e) };
 }
