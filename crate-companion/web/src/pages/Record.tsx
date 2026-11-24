@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { BasicInformation, ReleaseDetails, Track } from '../../../shared/discogs-types';
 import { api } from '../api';
@@ -190,12 +190,7 @@ function ReleaseSections({ d }: { d: ReleaseDetails }) {
       )}
       {credits.length > 0 && <Credits credits={credits} />}
       {ids.length > 0 && <Identifiers ids={ids} />}
-      {notes && (
-        <section className="glass panel" aria-labelledby="h-notes">
-          <h2 id="h-notes">Notes</h2>
-          <p className="notes">{notes}</p>
-        </section>
-      )}
+      {notes && <Notes text={notes} />}
     </div>
   );
 }
@@ -234,6 +229,28 @@ function runningTime(tracks: Track[]) {
   const m = Math.floor((total % 3600) / 60);
   const s = String(total % 60).padStart(2, '0');
   return `${n}, ${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${s}`;
+}
+
+/** Release notes, cut to a few lines with "Show more" when they run long. */
+function Notes({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el && !open) setLong(el.scrollHeight > el.clientHeight + 2);
+  }, [text, open]);
+  return (
+    <section className="glass panel" aria-labelledby="h-notes">
+      <h2 id="h-notes">Notes</h2>
+      <p ref={ref} id="release-notes" className={`notes${open ? '' : ' clamped'}`}>{text}</p>
+      {(long || open) && (
+        <button className="btn small" style={{ marginTop: 12 }} onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="release-notes">
+          {open ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </section>
+  );
 }
 
 const ID_PREVIEW = 3;
