@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+Bug fixes from the UI/UX review (no visual redesign):
+
+- Check an album no longer says "Not in your collection or wantlist" while your collection is
+  still loading or failed to load; it says "Checking your collection…" or offers Try again, and
+  I bought it waits until ownership is known.
+- Check an album shows every matching pressing ("Show all 14 pressings"), not just the first six.
+- After I bought it, switching to another pressing no longer shows "Added to your collection".
+- If the price lookup fails, Check an album says so, with Try again.
+- Going back from an album to the Collection keeps your search, filter, sort and place in the
+  list. In the list view, the whole row opens the album, not just the title.
+- Home shows the collection value under Recently added, not inside the wantlist card.
+- The personal token on the sign-in screen is hidden as you type, with Show token.
+
 - "Surprise me" gives different picks each time: the album list is shuffled and the last picks
   are skipped. (Asked exactly the same thing, the AI kept giving the same four albums.)
 - **AI without a key.** App builds can include AI through the new Crate Companion AI server

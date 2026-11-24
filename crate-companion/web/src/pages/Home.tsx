@@ -32,6 +32,7 @@ export function Home() {
   if (me.isLoading) return <Loading />;
   if (me.error) return <ErrorBox error={me.error} />;
   const { profile, value } = me.data!;
+  const wantCount = wants.data?.items.length ?? profile.num_wantlist ?? 0;
   const first = profile.name?.trim().split(/\s+/)[0] || profile.username;
   const b = lead?.basic_information;
 
@@ -93,11 +94,16 @@ export function Home() {
               );
             })}
           </ul>
+          {value && (
+            <p className="sub small home-value">
+              Discogs values your collection at about <b className="amber">{value.median}</b> ({value.minimum} to {value.maximum}).
+            </p>
+          )}
         </section>
         <section className="glass panel" aria-labelledby="h-wants">
-          <div className="section-head"><h2 id="h-wants">Your wantlist</h2><Link to="/wantlist">All {wants.data?.items.length ?? profile.num_wantlist ?? 0}</Link></div>
+          <div className="section-head"><h2 id="h-wants">Your wantlist</h2><Link to="/wantlist">All {wantCount}</Link></div>
           <p className="sub">
-            {value ? <>Discogs values your collection at about <b className="amber">{value.median}</b> ({value.minimum} to {value.maximum}).</> : 'Collection value unavailable.'}
+            {wantCount ? `${wantCount.toLocaleString()} album${wantCount === 1 ? '' : 's'} you're looking for. See which ones your favorite shops have for sale.` : 'Albums you want go here. Add them from any album page or from Discover.'}
           </p>
           <div className="page-actions" style={{ marginTop: 14 }}>
             <Link to="/match" className="btn primary">Check my favorite shops</Link>

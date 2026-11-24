@@ -21,6 +21,7 @@ export function Check() {
   const [text, setText] = useState('');
   const [query, setQuery] = useState<{ q?: string; barcode?: string } | null>(null);
   const [pick, setPick] = useState<SearchResult | null>(null);
+  const [allPressings, setAllPressings] = useState(false);
   const [price, setPrice] = useState('');
   const [media, setMedia] = useState('VG+');
   const [sleeve, setSleeve] = useState('VG+');
@@ -70,7 +71,9 @@ export function Check() {
   // `pick` is set by an effect, so for one render after a new search or photo it can still be
   // the old result's: only show it while it's among the current results.
   const shown = pick && found?.results.some((r) => r.id === pick.id) ? found : undefined;
-  useEffect(() => { setPick(found?.results[0] ?? null); bought.reset(); }, [found]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPick(found?.results[0] ?? null); setAllPressings(false); }, [found]);
+  // "Added to your collection" belongs to the pressing it was said about.
+  useEffect(() => { bought.reset(); }, [pick?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function submit(value = text) {
     const v = value.trim();
@@ -80,6 +83,10 @@ export function Check() {
     setQuery(/^\d{8,14}$/.test(digits) ? { barcode: digits } : { q: v });
   }
 
+  // Until both lists have loaded, "not in your collection" would be a guess.
+  const listsLoading = coll.isLoading || wants.isLoading;
+  const listsFailed = !listsLoading && (coll.isError || wants.isError);
+  const ownershipKnown = coll.isSuccess && wants.isSuccess;
   const ownedIds = new Set(coll.data?.items.map((i) => i.id));
   const ownedMasters = new Set(coll.data?.items.map((i) => i.basic_information.master_id).filter(Boolean));
   const wantIds = new Set(wants.data?.items.map((w) => w.id));
@@ -142,7 +149,13 @@ export function Check() {
                 {ownOther && <span className="status yes">You own another pressing</span>}
                 {wantedThis && <span className="status yes">On your wantlist</span>}
                 {wantedOther && <span className="status yes">Another pressing is on your wantlist</span>}
-                {!ownThis && !ownOther && !wantedThis && !wantedOther && <span className="status">Not in your collection or wantlist</span>}
+                {ownershipKnown && !ownThis && !ownOther && !wantedThis && !wantedOther && <span className="status">Not in your collection or wantlist</span>}
+                {listsLoading && <span className="status">Checking your collection…</span>}
+                {listsFailed && (
+                  <button className="status status-retry" onClick={() => { void coll.refetch(); void wants.refetch(); }}>
+                    Couldn't check. Try again
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -150,15 +163,20 @@ export function Check() {
           <fieldset className="glass panel" style={{ margin: 0 }}>
             <legend className="sr-only">Which pressing is in your hand?</legend>
             <h3 aria-hidden>Which pressing is in your hand?</h3>
-            {shown.results.slice(0, 6).map((r) => (
+            {(allPressings ? shown.results : shown.results.slice(0, 6)).map((r) => (
               <label key={r.id} className="pressing">
                 <input type="radio" name="pressing" checked={pick.id === r.id} onChange={() => setPick(r)} />
                 <span><b>{[r.label?.[0], r.catno].filter(Boolean).join(' ') || split(r.title).title}</b>
                   <small>{[r.country, r.year, r.format?.slice(0, 3).join(', ')].filter(Boolean).join(', ')}</small></span>
               </label>
             ))}
+            {!allPressings && shown.results.length > 6 && (
+              <button type="button" className="link-button" onClick={() => setAllPressings(true)}>
+                Show all {shown.results.length} pressings
+              </button>
+            )}
             <p className="sub small" style={{ marginTop: 10 }}>
-              {shown.total > 6 ? `${shown.total} releases match. ` : ''}Many pressings share a catalog number: compare the runout etched near the label.
+              {shown.total > shown.results.length ? `${shown.total} releases match; showing the first ${shown.results.length}. ` : shown.total > 6 ? `${shown.total} releases match. ` : ''}Many pressings share a catalog number: compare the runout etched near the label.
             </p>
           </fieldset>
 
@@ -171,6 +189,12 @@ export function Check() {
             </div>
             <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }} aria-live="polite">
               {stats.isLoading && <Loading label="Checking Discogs…" />}
+              {stats.isError && (
+                <div className="price-error">
+                  <ErrorBox error={stats.error} />
+                  <button className="btn small" onClick={() => void stats.refetch()}>Try again</button>
+                </div>
+              )}
               {stats.data && (low && stats.data.num_for_sale ? (
                 <>
                   <div className="verdict"><b>{money(low.value, low.currency)}</b><span>cheapest of {stats.data.num_for_sale} on Discogs</span></div>
@@ -186,7 +210,7 @@ export function Check() {
           </section>
 
           <div className="page-actions">
-            {!ownThis && <button className="btn primary" disabled={bought.isPending || bought.isSuccess} onClick={() => bought.mutate()}>{bought.isSuccess ? 'Added to your collection' : 'I bought it'}</button>}
+            {ownershipKnown && !ownThis && <button className="btn primary" disabled={bought.isPending || bought.isSuccess} onClick={() => bought.mutate()}>{bought.isSuccess ? 'Added to your collection' : 'I bought it'}</button>}
             {stats.data?.num_for_sale ? <a className="btn" href={`https://www.discogs.com/sell/release/${pick.id}`} target="_blank" rel="noreferrer">See the listings</a> : null}
             {ownThis && <Link className="btn" to={`/record/${pick.id}`}>Open your copy</Link>}
           </div>
