@@ -5,6 +5,22 @@ interface HeroProps {
   src?: string | null; id: number; artist: string; title: string; label?: string; className?: string;
   /** Vinyl (the default), a CD or a cassette: each has its own case and media. */
   kind?: MediaKind;
+  /** Makes the cover a button that opens the release's images; shows how many there are. */
+  onOpen?: () => void;
+  imageCount?: number;
+}
+
+/** Over the cover: a button to see the images full screen, with a quiet hint in the corner. */
+function OpenImages({ onOpen, imageCount, title }: Pick<HeroProps, 'onOpen' | 'imageCount' | 'title'>) {
+  if (!onOpen) return null;
+  return (
+    <button type="button" className="hero-open" onClick={onOpen} aria-label={`See ${imageCount && imageCount > 1 ? `all ${imageCount} images` : 'the cover'} of ${title}`}>
+      <span className="hero-open-hint" aria-hidden>
+        <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+        {imageCount && imageCount > 1 ? imageCount : null}
+      </span>
+    </button>
+  );
 }
 
 /**
@@ -20,7 +36,7 @@ export function RecordHero(p: HeroProps) {
   return <VinylHero {...p} />;
 }
 
-function VinylHero({ src, id, artist, title, label, className = '' }: HeroProps) {
+function VinylHero({ src, id, artist, title, label, className = '', onOpen, imageCount }: HeroProps) {
   return (
     <div className={`hero ${className}`}>
       <div className="hero-pool" aria-hidden />
@@ -40,12 +56,13 @@ function VinylHero({ src, id, artist, title, label, className = '' }: HeroProps)
       <div className="hero-sleeve">
         <Cover src={src} id={id} alt={`Cover of ${title} by ${artist}`} />
         <div className="hero-sleeve-light" aria-hidden />
+        <OpenImages onOpen={onOpen} imageCount={imageCount} title={title} />
       </div>
     </div>
   );
 }
 
-function CdHero({ src, id, artist, title, className = '' }: HeroProps) {
+function CdHero({ src, id, artist, title, className = '', onOpen, imageCount }: HeroProps) {
   return (
     <div className={`hero hero-cd ${className}`}>
       <div className="hero-pool" aria-hidden />
@@ -58,12 +75,13 @@ function CdHero({ src, id, artist, title, className = '' }: HeroProps) {
         <Cover src={src} id={id} alt={`Cover of ${title} by ${artist}`} />
         <div className="cd-hinge" aria-hidden />
         <div className="cd-gloss" aria-hidden />
+        <OpenImages onOpen={onOpen} imageCount={imageCount} title={title} />
       </div>
     </div>
   );
 }
 
-function CassetteHero({ src, id, artist, title, className = '' }: HeroProps) {
+function CassetteHero({ src, id, artist, title, className = '', onOpen, imageCount }: HeroProps) {
   return (
     <div className={`hero hero-cassette ${className}`}>
       <div className="hero-pool" aria-hidden />
@@ -85,6 +103,7 @@ function CassetteHero({ src, id, artist, title, className = '' }: HeroProps) {
       <div className="tape-case">
         <Cover src={src} id={id} alt={`Cover of ${title} by ${artist}`} />
         <div className="cd-gloss" aria-hidden />
+        <OpenImages onOpen={onOpen} imageCount={imageCount} title={title} />
       </div>
     </div>
   );

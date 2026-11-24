@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { BasicInformation, ReleaseDetails, Track } from '../../../shared/discogs-types';
 import { api } from '../api';
 import { RecordHero } from '../components/RecordHero';
+import { ImageViewer } from '../components/ImageViewer';
+import { ICONS } from '../components/Layout';
 import { gradeLabels, kindOf, type MediaKind } from '../../../shared/formats';
 import { RateRecord } from '../components/Stars';
 import { Empty, ErrorBox, GradeMeter, Loading, artistLine, discogsUrl, formatLine, money } from '../components/ui';
@@ -22,8 +24,8 @@ import { load, save } from '../storage';
  */
 export function Record() {
   const id = Number(useParams().releaseId);
-  const navigate = useNavigate();
   const qc = useQueryClient();
+  const [viewing, setViewing] = useState(false);
   const coll = useQuery({ queryKey: ['collection', 0], queryFn: () => api.collection(0) });
   const wants = useQuery({ queryKey: ['wants'], queryFn: api.wants });
   const fields = useQuery({ queryKey: ['fields'], queryFn: api.fields });
@@ -40,7 +42,7 @@ export function Record() {
   const stats = useQuery({ queryKey: ['stats', id], queryFn: () => api.stats(id), enabled: !owned && !!b });
   const remove = useMutation({
     mutationFn: () => api.removeWant(id),
-    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['wants'] }); navigate('/wantlist'); },
+    onSuccess: () => { addWant.reset(); void qc.invalidateQueries({ queryKey: ['wants'] }); },
   });
   const addWant = useMutation({
     mutationFn: () => api.addWant({ releaseId: id }),
@@ -67,6 +69,8 @@ export function Record() {
   }
   const g = myGrades(owned, fields.data?.fields);
   const kind = kindOf(b);
+  // Every image Discogs has for the release (front, back, labels…), or at least the cover.
+  const images = d?.images?.length ? d.images.map((i) => i.uri).filter(Boolean) : b?.cover_image ? [b.cover_image] : [];
   const names = gradeLabels(kind);
   const label = (d?.labels ?? b.labels)[0];
   const format = d ? formatLine({ formats: d.formats }) + formatText(d) : formatLine(b);
@@ -76,7 +80,9 @@ export function Record() {
     <div className="page">
       <BackButton />
       <div className="detail">
-        <RecordHero kind={kind} src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={label?.name} />
+        <RecordHero kind={kind} src={b.cover_image || b.thumb} id={b.id} artist={artistLine(b)} title={b.title} label={label?.name}
+          onOpen={images.length ? () => setViewing(true) : undefined} imageCount={images.length} />
+        {viewing && <ImageViewer images={images} title={b.title} onClose={() => setViewing(false)} />}
         <div className="detail-info">
           <div>
             <h1>{b.title}</h1>
@@ -136,23 +142,48 @@ export function Record() {
           {(b.styles?.length ?? 0) > 0 && <div className="chip-row">{b.styles!.map((s) => <span key={s} className="chip static">{s}</span>)}</div>}
           {d?.community && <Community c={d.community} />}
 
-          <div className="page-actions">
+          {/* One main action as a pill; the rest as a quiet row of icon buttons. */}
+          <div className="album-actions">
             {!owned && forSale > 0 && (
               <a className="btn primary" href={`https://www.discogs.com/sell/release/${id}`} target="_blank" rel="noreferrer">See the {forSale} listing{forSale === 1 ? '' : 's'}</a>
             )}
-            {!owned && (
-              <button className={`btn${forSale > 0 ? '' : ' primary'}`} disabled={addCopy.isPending || addCopy.isSuccess} onClick={() => addCopy.mutate(!!wanted)}>
+            {!owned && forSale === 0 && (
+              <button className="btn primary" disabled={addCopy.isPending || addCopy.isSuccess} onClick={() => addCopy.mutate(!!wanted)}>
                 {addCopy.isSuccess ? 'Added to your collection' : addCopy.isPending ? 'Adding…' : 'Add to collection'}
               </button>
             )}
-            {wanted && !owned && <Link className="btn" to="/match">Check my favorite shops</Link>}
-            {!owned && !wanted && (
-              <button className="btn" disabled={addWant.isPending || addWant.isSuccess} onClick={() => addWant.mutate()}>
-                {addWant.isSuccess ? 'Added to wantlist' : 'Add to wantlist'}
-              </button>
-            )}
-            <a className="btn" href={discogsUrl('release', id)} target="_blank" rel="noreferrer">Open on Discogs</a>
-            {wanted && !owned && <button className="btn danger" disabled={remove.isPending} onClick={() => remove.mutate()}>Remove from wantlist</button>}
+            <div className="action-row">
+              {!owned && forSale > 0 && (
+                <button className={`action-icon${addCopy.isSuccess ? ' on' : ''}`} disabled={addCopy.isPending || addCopy.isSuccess} onClick={() => addCopy.mutate(!!wanted)}>
+                  <span className="action-disc"><svg viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="8.5" /><path d="M12 8v8M8 12h8" /></svg></span>
+                  {addCopy.isSuccess ? 'Added' : 'Collection'}
+                </button>
+              )}
+              {!owned && (
+                <button
+                  className={`action-icon${wanted || addWant.isSuccess ? ' on' : ''}`}
+                  aria-pressed={!!wanted || addWant.isSuccess}
+                  disabled={addWant.isPending || remove.isPending}
+                  onClick={() => {
+                    if (wanted) { if (confirm(`Remove ${b.title} from your wantlist?`)) remove.mutate(); }
+                    else addWant.mutate();
+                  }}
+                >
+                  <span className="action-disc"><svg className="fill-on" viewBox="0 0 24 24" aria-hidden><path d={ICONS.wantlist} /></svg></span>
+                  {wanted || addWant.isSuccess ? 'Wanted' : 'Want it'}
+                </button>
+              )}
+              {wanted && !owned && (
+                <Link className="action-icon" to="/match">
+                  <span className="action-disc"><svg viewBox="0 0 24 24" aria-hidden><path d="M4 10l1.5-5h13L20 10M4 10h16M4 10v1a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0v-1M5.5 13.5V20h13v-6.5M10 20v-4h4v4" /></svg></span>
+                  Shops
+                </Link>
+              )}
+              <a className="action-icon" href={discogsUrl('release', id)} target="_blank" rel="noreferrer">
+                <span className="action-disc"><svg viewBox="0 0 24 24" aria-hidden><path d="M14 5h5v5M19 5l-8 8M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4" /></svg></span>
+                Discogs
+              </a>
+            </div>
           </div>
           {addCopy.isSuccess && <p className="sub" aria-live="polite">Added to your Discogs collection{addCopy.variables ? ' and removed from your wantlist' : ''}.</p>}
           <ErrorBox error={remove.error ?? addWant.error ?? addCopy.error} />
