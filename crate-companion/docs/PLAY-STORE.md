@@ -42,7 +42,7 @@ https://barkingspud.github.io/marks-garage/privacy.html
 
 **App category:** Music & Audio. **Tags:** Music, Collecting (or the closest offered).
 
-**Contact details:** email (required, shown publicly); website https://barkingspud.github.io/marks-garage/
+**Contact details:** email barkingspud@gmail.com (shown publicly); website https://barkingspud.github.io/marks-garage/
 
 **Graphics**
 
