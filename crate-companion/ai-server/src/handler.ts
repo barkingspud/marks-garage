@@ -52,7 +52,8 @@ function monthName(resetsOn: string) {
 export async function handle(req: Request, deps: Deps): Promise<Response> {
   const url = new URL(req.url);
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-  if (url.pathname === '/') return json({ service: 'Crate Companion AI', ok: true });
+  // The website (crate-companion/site) answers / and /privacy before this runs.
+  if (url.pathname === '/health') return json({ service: 'Crate Companion AI', ok: true });
 
   const install = req.headers.get('x-install-id') ?? '';
   if (!INSTALL.test(install)) return fail(400, 'Missing or bad install id.');

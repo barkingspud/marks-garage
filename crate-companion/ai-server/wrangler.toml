@@ -15,6 +15,14 @@ IP_DAILY_REQUESTS = "300"
 # When the month's spend reaches this (U.S. dollars), the included AI pauses until next month.
 MONTHLY_BUDGET_USD = "10"
 
+# The app's website (privacy policy and home page) is served from the same address:
+# /privacy and /. Files there are answered before the Worker runs; everything else
+# (the /v1 API) goes to the Worker.
+[assets]
+directory = "../site"
+html_handling = "drop-trailing-slash"
+not_found_handling = "none"
+
 [[durable_objects.bindings]]
 name = "METER"
 class_name = "MeterObject"
