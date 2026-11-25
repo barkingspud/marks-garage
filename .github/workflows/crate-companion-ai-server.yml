@@ -1,7 +1,8 @@
 name: Crate Companion AI server
 
 # Deploys the AI server (crate-companion/ai-server, a Cloudflare Worker) that gives the app
-# AI without a key of its own. Runs when the server or the AI tasks change on main, or by hand.
+# AI without a key of its own, plus the app's website (crate-companion/site: the privacy
+# policy and home page). Runs when any of them change on main, or by hand.
 #
 # Repository secrets (Settings > Secrets and variables > Actions):
 #   CLOUDFLARE_API_TOKEN   a Cloudflare API token from the "Edit Cloudflare Workers" template
@@ -17,6 +18,7 @@ on:
       - 'crate-companion/ai-server/**'
       - 'crate-companion/core/ai/**'
       - 'crate-companion/shared/ai-models.ts'
+      - 'crate-companion/site/**'
       - 'crate-companion/package-lock.json'
       - '.github/workflows/crate-companion-ai-server.yml'
   workflow_dispatch:

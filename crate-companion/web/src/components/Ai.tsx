@@ -103,7 +103,7 @@ export function IncludedAi() {
       {s.data?.installId && (
         <p className="sub small install-id">
           Install ID <span className="num">{s.data.installId}</span>. A random number that counts this phone's uses; it isn't linked to you.
-          {' '}<a href="https://barkingspud.github.io/marks-garage/privacy.html" target="_blank" rel="noreferrer">Privacy policy</a>
+          {' '}<a href="https://crate-companion-ai.barkingspud.workers.dev/privacy" target="_blank" rel="noreferrer">Privacy policy</a>
         </p>
       )}
     </div>

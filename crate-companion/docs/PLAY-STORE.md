@@ -1,7 +1,7 @@
 # Google Play: listing and forms
 
 Everything Play Console asks for, ready to copy. Privacy policy:
-https://barkingspud.github.io/marks-garage/privacy.html
+https://crate-companion-ai.barkingspud.workers.dev/privacy
 
 ## Store listing (Grow users, Store presence, Main store listing)
 
@@ -42,7 +42,7 @@ https://barkingspud.github.io/marks-garage/privacy.html
 
 **App category:** Music & Audio. **Tags:** Music, Collecting (or the closest offered).
 
-**Contact details:** email barkingspud@gmail.com (shown publicly); website https://barkingspud.github.io/marks-garage/
+**Contact details:** email barkingspud@gmail.com (shown publicly); website https://crate-companion-ai.barkingspud.workers.dev/
 
 **Graphics**
 
@@ -52,7 +52,7 @@ https://barkingspud.github.io/marks-garage/privacy.html
 
 ## App content (Policy, App content)
 
-**Privacy policy:** https://barkingspud.github.io/marks-garage/privacy.html
+**Privacy policy:** https://crate-companion-ai.barkingspud.workers.dev/privacy
 
 **Ads:** No, my app does not contain ads.
 
