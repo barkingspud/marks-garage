@@ -9,4 +9,3 @@ CHANGELOG.
 | Project | What it does |
 |---|---|
 | [`eclipse-stabilizer/`](eclipse-stabilizer/) | Stabilizes shaky eclipse timelapses (lunar; solar untested) — locks the sun/moon to a fixed position, removes field rotation, skips cloud-obscured stretches. GUI + Windows installer, or CLI. |
-| [`crate-companion/`](crate-companion/) | Record-collector app on the Discogs API: browse your collection and wantlist, match wants to sellers by grade, rating and price, and get recommendations based on what you own. Web now, Android later. |
