@@ -45,6 +45,20 @@ describe('meter', () => {
     expect((await m.reserve('c', 'u3', 'other-ip', now)).ok).toBe(true);
   });
 
+  it('never stores a network address, only a hash that changes every day', async () => {
+    const store = new MapStore();
+    const m = new Meter(store, limits);
+    await m.reserve(INSTALL, 'u1', '203.0.113.7', now);
+    expect(JSON.stringify([...store.map])).not.toContain('203.0.113.7');
+    const ipKeys = () => [...store.map.keys()].filter((k) => k.startsWith('ip:'));
+    expect(ipKeys()).toHaveLength(1);
+    // The next day, the same address hashes differently (a new random key).
+    const tomorrow = new Date(now.getTime() + 86_400_000);
+    await m.reserve(INSTALL, 'u2', '203.0.113.7', tomorrow);
+    const [k1, k2] = ipKeys().map((k) => k.split(':')[2]);
+    expect(k1).not.toBe(k2);
+  });
+
   it('pauses when the month reaches the budget', async () => {
     const m = new Meter(new MapStore(), limits);
     await m.spend(9.99, now);

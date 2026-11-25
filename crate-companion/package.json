@@ -1,6 +1,6 @@
 {
   "name": "crate-companion",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Track your record collection and wantlist, match wants to sellers, and get recommendations — powered by the Discogs API.",
   "type": "module",

@@ -475,6 +475,7 @@ select.input option { background: #1b2028; }
 .ai-details { margin-top: 16px; }
 .ai-included { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 .ai-included p { margin: 0; }
+.install-id .num { overflow-wrap: anywhere; user-select: all; color: var(--text); }
 .allowance-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
 .allowance-bar span { display: block; height: 100%; background: var(--amber); border-radius: inherit; }
 .model-picker { border: 0; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }

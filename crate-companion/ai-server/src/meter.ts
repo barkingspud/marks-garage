@@ -51,7 +51,7 @@ export class Meter {
     const m = month(now);
     const usesKey = `uses:${m}:${install}`;
     const lastKey = `last:${install}`;
-    const ipKey = `ip:${day(now)}:${ip}`;
+    const ipKey = `ip:${day(now)}:${await this.ipTag(ip, now)}`;
     let used = (await this.store.get<number>(usesKey)) ?? 0;
     const allowance = () => ({ used, limit: this.limits.monthlyUses, resetsOn: nextMonth(now) });
 
@@ -69,6 +69,24 @@ export class Meter {
     await this.store.put(lastKey, { use, month: m, requests: sameUse ? last!.requests + 1 : 1 });
     await this.store.put(ipKey, ipCount + 1);
     return { ok: true, allowance: allowance() };
+  }
+
+  /**
+   * Network addresses are never stored: only a keyed hash of one, good for today's count. The
+   * key is random, kept only here, and replaced each day, so yesterday's hashes can't be traced
+   * back to an address by anyone, including us.
+   */
+  private async ipTag(ip: string, now: Date): Promise<string> {
+    const today = day(now);
+    let salt = await this.store.get<{ day: string; key: string }>('ipsalt');
+    if (salt?.day !== today) {
+      const bytes = crypto.getRandomValues(new Uint8Array(32));
+      salt = { day: today, key: [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('') };
+      await this.store.put('ipsalt', salt);
+    }
+    const data = new TextEncoder().encode(`${salt.key}|${ip}`);
+    const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+    return [...hash.slice(0, 12)].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   /** A request failed before Claude did any work: give the use back. */

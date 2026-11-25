@@ -256,6 +256,7 @@ export class CrateCore {
       included,
       model: ownKey ? await this.aiModel() : INCLUDED_MODEL,
       allowance: included ? await this.savedAllowance() : undefined,
+      installId: included ? (await this.store.get(AI_INSTALL_KEY)) ?? undefined : undefined,
     };
   }
 
